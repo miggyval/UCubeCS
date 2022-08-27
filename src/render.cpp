@@ -18,13 +18,10 @@
 #ifdef __APPLE__
 #include <Foundation/Foundation.hpp>
 #include <Metal/Metal.hpp>
-<<<<<<< HEAD
 #include <metal_adder/metal_adder.hpp>
 #endif
-=======
 
 #include <render/render.hpp>
->>>>>>> 64b1241157e11debca0ec709b563b301e94b4a4c
 
 #define ROWS    1024
 #define COLS    1024
