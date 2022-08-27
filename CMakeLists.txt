@@ -4,6 +4,7 @@ project( render_test )
 
 
 set(render_test_VERSION 1.0)
+set(CMAKE_BUILD_TYPE Debug)
 
 include(GenerateExportHeader)
 

@@ -18,18 +18,90 @@
 #ifdef __APPLE__
 #include <Foundation/Foundation.hpp>
 #include <Metal/Metal.hpp>
+<<<<<<< HEAD
 #include <metal_adder/metal_adder.hpp>
 #endif
+=======
+
+#include <render/render.hpp>
+>>>>>>> 64b1241157e11debca0ec709b563b301e94b4a4c
 
 #define ROWS    1024
 #define COLS    1024
 #define CHNS    3
 #define DIMS    3
 
-int render(uint8_t data[ROWS][COLS][CHNS], float vertices[][DIMS], float colors[][DIMS], uint32_t faces[][DIMS], const size_t N);
+metal_renderer::metal_renderer(MTL::Device* device) : _device(device) {}
 
-void render_cpu(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint* Nv, uint* Nf, uint index);
+void metal_renderer::helper_render(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
+    
+    /* Create Buffers */
+    MTL::Buffer* data_gpu;
+    MTL::Buffer* vertices_gpu;
+    MTL::Buffer* colors_gpu;
+    MTL::Buffer* faces_gpu;
 
+    data_gpu = _device->newBuffer(sizeof(uint8_t) * ROWS * COLS * CHNS, MTL::ResourceStorageModeShared);
+    vertices_gpu = _device->newBuffer(sizeof(float) * Nv * 3, MTL::ResourceStorageModeShared);
+    colors_gpu = _device->newBuffer(sizeof(float) *  Nv * 3, MTL::ResourceStorageModeShared);
+    faces_gpu = _device->newBuffer(sizeof(uint) * Nf * 3, MTL::ResourceStorageModeShared);
+
+    MTL::CommandBuffer* command_buffer = _CommandQueue->commandBuffer();
+    MTL::ComputeCommandEncoder* compute_encoder = command_buffer->computeCommandEncoder();
+    
+    compute_encoder->setComputePipelineState(_addFunctionPSO);
+
+    compute_encoder->setBuffer(data_gpu, 0, 0);
+    compute_encoder->setBuffer(vertices_gpu, 0, 1);
+    compute_encoder->setBuffer(colors_gpu, 0, 2);
+    compute_encoder->setBuffer(faces_gpu, 0, 3);
+    
+    MTL::Size grid_size = MTL::Size(ROWS * COLS, 1, 1);
+    
+    NS::UInteger _thread_group_size = _addFunctionPSO->maxTotalThreadsPerThreadgroup();
+    if(_thread_group_size > ROWS * COLS){
+        _thread_group_size = ROWS * COLS;
+    }
+    
+    MTL::Size thread_group_size = MTL::Size(_thread_group_size, 1, 1);
+    
+    compute_encoder->dispatchThreads(grid_size, thread_group_size);
+    compute_encoder->endEncoding();
+    command_buffer->commit();
+    command_buffer->waitUntilCompleted();
+}
+
+
+int metal_renderer::init() {
+    
+    NS::Error* error;
+    NS::String* filePath = NS::String::string("/Users/valencimm/render_test/src/render.metallib", NS::UTF8StringEncoding);
+
+    auto lib = _device->newDefaultLibrary();
+    lib = _device->newLibrary(filePath, &error);
+    if (error) {
+        std::cerr << "Failed to load render.metal\n";
+        std::exit(-1);
+    }
+    
+    auto function = NS::String::string("render", NS::ASCIIStringEncoding);
+    auto mtl_function = lib->newFunction(function);
+    if (!mtl_function){
+        std::cerr << "failed to load kernel\n";
+        std::exit(-1);
+    }
+
+    _addFunctionPSO = _device->newComputePipelineState(mtl_function, &error);
+    _CommandQueue   = _device->newCommandQueue();
+    return 1;
+    
+}
+
+//int render(uint8_t data[ROWS][COLS][CHNS], float vertices[][DIMS], float colors[][DIMS], uint32_t faces[][DIMS], const size_t N);
+
+//void render_cpu(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint* Nv, uint* Nf, uint index);
+
+/*
 void render_cpu(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint* Nv, uint* Nf, uint index) {
     const size_t height = COLS;
     const size_t width = ROWS;
@@ -92,7 +164,8 @@ void render_cpu(uint8_t* data, float* vertices, float* colors, uint32_t* faces, 
         }
     }
 }
-
+*/
+/*
 int render(uint8_t data[ROWS][COLS][CHNS], float vertices[][DIMS], float colors[][DIMS], uint32_t faces[][DIMS], const size_t N) {
     const size_t height = COLS;
     const size_t width = ROWS;
@@ -170,90 +243,4 @@ int render(uint8_t data[ROWS][COLS][CHNS], float vertices[][DIMS], float colors[
     }
     return 0;
 }
-
-int main(int argc, char** argv) {
-
-    cv::namedWindow("render", cv::WINDOW_NORMAL);
-    cv::resizeWindow("render", cv::Size(COLS, ROWS));
-    
-    uint8_t data[ROWS][COLS][CHNS] = {0};
-    float size = 0.5;
-
-    float vertices[][DIMS] = {
-        {-size, -size, 0.0},
-        {size, -size, 0.0},
-        {-size, size, 0.0},
-        {size, size, 0.0},
-    };
-
-    float colors[][DIMS] = {
-        {0.0, 0.0, 1.0},
-        {0.0, 1.0, 0.0},
-        {1.0, 0.0, 0.0},
-        {0.0, 1.0, 1.0}
-    };
-
-    uint32_t faces[][DIMS] = {
-        {0, 1, 2},
-        {3, 2, 1}
-    };
-
-    //NS::AutoreleasePool* p_pool = NS::AutoreleasePool::alloc()->init();
-    //MTL::Device* device = MTL::CreateSystemDefaultDevice();
-    //metal_adder* adder = new metal_adder();
-    //adder->init_with_device(device);
-    //adder->prepare_data();
-    //adder->send_compute_command();
-    
-    //std::cout << " End of Computation  " << std::endl;
-    //p_pool->release();
-
-    uint Nv = 4;
-    uint Nf = 2;
-
-    uint8_t* data_cpu = (uint8_t*)malloc(sizeof(uint8_t) * ROWS * COLS * CHNS);
-    float* vertices_cpu = (float*)malloc(sizeof(float) *  Nv * 3);
-    float* colors_cpu = (float*)malloc(sizeof(float) *  Nv * 3);
-    uint* faces_cpu = (uint*)malloc(sizeof(uint) * Nf * 3);
-
-    for (size_t i = 0; i < ROWS; i++) {
-        for (size_t j = 0; j < COLS; j++) {
-            for (size_t chan = 0; chan < CHNS; chan++) {
-                data_cpu[i * COLS * CHNS + j * CHNS + chan] = 0;
-            }
-        }
-    }
-    for (int i = 0; i < Nv; i++) {
-        for (int j = 0; j < DIMS; j++) {
-            vertices_cpu[DIMS * i + j] = vertices[i][j];
-            colors_cpu[DIMS * i + j] = colors[i][j];
-        }
-    }
-    for (int i = 0; i < Nf; i++) {
-        for (int j = 0; j < DIMS; j++) {
-            faces_cpu[DIMS * i + j] = faces[i][j];
-        }
-    }
-
-    while (true) {
-        for (int index = 0; index < ROWS * COLS; index++) {
-            render_cpu(data_cpu, vertices_cpu, colors_cpu, faces_cpu, &Nv, &Nf, index);
-        }
-        
-        cv::Mat img(cv::Size(COLS, ROWS), CV_8UC3);
-        for (size_t i = 0; i < ROWS; i++) {
-            for (size_t j = 0; j < COLS; j++) {
-                img.at<cv::Vec<uint8_t, 3>>(i, j) = cv::Vec<uint8_t, 3>(data_cpu[3 * COLS * i + 3 * j], data_cpu[3 * COLS * i + 3 * j + 1], data_cpu[3 * COLS * i + 3 * j + 2]);
-            }
-        }
-        cv::imshow("render", img);
-        cv::waitKey(1);
-        
-    }
-    free(data_cpu);
-    free(vertices_cpu);
-    free(colors_cpu);
-    free(faces_cpu);
-
-    return 0;
-}
+*/

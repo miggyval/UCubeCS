@@ -1,1 +1,1 @@
-xcrun -sdk macosx metal -c add.metal -o add.air && xcrun -sdk macosx metallib add.air -o add.metallib
+xcrun -sdk macosx metal -c render.metal -o render.air && xcrun -sdk macosx metallib render.air -o render.metallib

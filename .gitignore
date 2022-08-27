@@ -1,2 +1,4 @@
 build/*
 .vscode/*
+src/*.air
+src/*.metallib
