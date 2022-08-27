@@ -14,13 +14,15 @@
 #include <opencv2/core/cuda_types.hpp>
 
 #include <cstdint>
+
+#ifdef __APPLE__
 #include <Foundation/Foundation.hpp>
 #include <Metal/Metal.hpp>
-
 #include <metal_adder/metal_adder.hpp>
+#endif
 
-#define ROWS    256
-#define COLS    256
+#define ROWS    1024
+#define COLS    1024
 #define CHNS    3
 #define DIMS    3
 
