@@ -74,8 +74,33 @@ int main(int argc, char** argv) {
             faces_cpu[IMG_DIMS * i + j] = faces[i][j];
         }
     }
-
+    float theta_x = 0.0f;
+    float theta_z = 0.0f;
+    float* vertices_copy = (float*)malloc(sizeof(float) *  Nv * 3);
+    memcpy(vertices_copy, vertices_cpu, sizeof(float) *  Nv * 3);
     while (true) {
+        theta_x += 0.01f;
+        float rotation_z[3][3] = {
+            {cos(theta_z), -sin(theta_z), 0},
+            {sin(theta_z), cos(theta_z), 0},
+            {0, 0, 1}
+        };
+
+        float rotation_x[3][3] = {
+            {1, 0, 0},
+            {0, cos(theta_x), sin(theta_x)},
+            {0, sin(theta_x), cos(theta_x)}
+        };
+
+        for (int nv = 0; nv < Nv; nv++) {
+            for (int i = 0; i < 3; i++) {
+                vertices_cpu[nv * 3 + i] = 0.0;
+                for (int j = 0; j < 3; j++) {
+                    vertices_cpu[nv * 3 + i] += rotation_x[i][j] * vertices_copy[nv * 3 + j];
+                }
+            }
+        }
+        
         renderer->render_vertices(data_cpu, vertices_cpu, colors_cpu, faces_cpu, Nv, Nf);
         
         cv::Mat img(cv::Size(IMG_COLS, IMG_ROWS), CV_8UC3);
@@ -88,6 +113,8 @@ int main(int argc, char** argv) {
         cv::waitKey(1);
         
     }
+
+    free(vertices_copy);
     free(data_cpu);
     free(vertices_cpu);
     free(colors_cpu);
