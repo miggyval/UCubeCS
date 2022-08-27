@@ -3,6 +3,11 @@ cmake_minimum_required( VERSION 3.10 )
 project( render_test )
 
 
+add_definitions(-DIMG_ROWS=1024)
+add_definitions(-DIMG_COLS=1024)
+add_definitions(-DIMG_CHNS=3)
+add_definitions(-DIMG_DIMS=3)
+
 if (UNIX)
     set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
     enable_language(CUDA)
