@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdint>
+
 #ifdef __APPLE__
 #define NS_PRIVATE_IMPLEMENTATION
 #define CA_PRIVATE_IMPLEMENTATION
@@ -115,11 +116,14 @@ void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors
     float* vertices_gpu;
     float* colors_gpu;
     uint* faces_gpu;
-    std::cout << "A" << std::endl;
 
     cudaError_t err = cudaSuccess;
 
     err = cudaMalloc((void**)&data_gpu, sizeof(uint8_t) * ROWS * COLS * CHNS);
+
+    if (err != cudaSuccess) {
+        printf("%s %d\n\r", cudaGetErrorString(err), __LINE__);
+    }
     err = cudaMalloc((void**)&vertices_gpu, sizeof(float) * Nv * 3);
     err = cudaMalloc((void**)&colors_gpu, sizeof(float) * Nv * 3);
     err = cudaMalloc((void**)&faces_gpu, sizeof(uint) * Nf * 3);
@@ -137,6 +141,8 @@ void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors
     err = cudaFree(vertices_gpu);
     err = cudaFree(colors_gpu);
     err = cudaFree(faces_gpu);
+
+    err = cudaGetLastError();
     
 }
 

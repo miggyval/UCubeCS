@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
         {0, 1, 2},
         {3, 2, 1}
     };
+    
 #ifdef __APPLE__
     NS::AutoreleasePool* p_pool = NS::AutoreleasePool::alloc()->init();
     MTL::Device* device = MTL::CreateSystemDefaultDevice();
@@ -66,24 +67,19 @@ int main(int argc, char** argv) {
     float* colors_cpu = (float*)malloc(sizeof(float) *  Nv * 3);
     uint* faces_cpu = (uint*)malloc(sizeof(uint) * Nf * 3);
 
-    for (size_t i = 0; i < ROWS; i++) {
-        for (size_t j = 0; j < COLS; j++) {
-            for (size_t chan = 0; chan < CHNS; chan++) {
-                data_cpu[i * COLS * CHNS + j * CHNS + chan] = 0;
-            }
-        }
-    }
     for (int i = 0; i < Nv; i++) {
         for (int j = 0; j < DIMS; j++) {
             vertices_cpu[DIMS * i + j] = vertices[i][j];
             colors_cpu[DIMS * i + j] = colors[i][j];
         }
     }
+
     for (int i = 0; i < Nf; i++) {
         for (int j = 0; j < DIMS; j++) {
             faces_cpu[DIMS * i + j] = faces[i][j];
         }
     }
+
     while (true) {
         for (int index = 0; index < ROWS * COLS; index++) {
             renderer->render_vertices(data_cpu, vertices_cpu, colors_cpu, faces_cpu, Nv, Nf);

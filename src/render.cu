@@ -18,7 +18,6 @@ __global__ void render(uint8_t* data, float* vertices, float* colors, uint32_t* 
 
     int numElements = width * height;
     int index = blockDim.x * blockIdx.x + threadIdx.x;
-    printf("%i\n\r", numElements);
 
     int i = index / COLS;
     int j = index % COLS;
