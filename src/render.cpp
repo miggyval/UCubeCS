@@ -1,9 +1,10 @@
 #include <iostream>
 #include <cstdint>
-
+#ifdef __APPLE__
 #define NS_PRIVATE_IMPLEMENTATION
 #define CA_PRIVATE_IMPLEMENTATION
 #define MTL_PRIVATE_IMPLEMENTATION
+#endif
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
@@ -21,16 +22,23 @@
 #include <metal_adder/metal_adder.hpp>
 #endif
 
+#if __gnu_linux__
+
+#include <cuda_runtime.h>
+
+#endif
+
 #include <render/render.hpp>
 
-#define ROWS    1024
-#define COLS    1024
+#define ROWS    64
+#define COLS    64
 #define CHNS    3
 #define DIMS    3
 
-metal_renderer::metal_renderer(MTL::Device* device) : _device(device) {}
+#ifdef __APPLE__
+MetalRenderer::MetalRenderer(MTL::Device* device) : _device(device) {}
 
-void metal_renderer::helper_render(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
+void MetalRenderer::render_vertices(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
     
     /* Create Buffers */
     MTL::Buffer* data_gpu;
@@ -69,7 +77,7 @@ void metal_renderer::helper_render(uint8_t* data, float* vertices, float* colors
 }
 
 
-int metal_renderer::init() {
+int MetalRenderer::init() {
     
     NS::Error* error;
     NS::String* filePath = NS::String::string("/Users/valencimm/render_test/src/render.metallib", NS::UTF8StringEncoding);
@@ -93,6 +101,46 @@ int metal_renderer::init() {
     return 1;
     
 }
+#endif
+
+
+CudaRenderer::CudaRenderer() {
+    
+}
+
+void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
+   
+    /* Create Buffers */
+    uint8_t* data_gpu;
+    float* vertices_gpu;
+    float* colors_gpu;
+    uint* faces_gpu;
+    std::cout << "A" << std::endl;
+
+    cudaError_t err = cudaSuccess;
+
+    err = cudaMalloc((void**)&data_gpu, sizeof(uint8_t) * ROWS * COLS * CHNS);
+    err = cudaMalloc((void**)&vertices_gpu, sizeof(float) * Nv * 3);
+    err = cudaMalloc((void**)&colors_gpu, sizeof(float) * Nv * 3);
+    err = cudaMalloc((void**)&faces_gpu, sizeof(uint) * Nf * 3);
+
+    err = cudaMemcpy(vertices_gpu, vertices, sizeof(float) * Nv * 3, cudaMemcpyHostToDevice);
+    err = cudaMemcpy(colors_gpu, colors, sizeof(float) * Nv * 3, cudaMemcpyHostToDevice);
+    err = cudaMemcpy(faces_gpu, faces, sizeof(uint) * Nf * 3, cudaMemcpyHostToDevice);
+
+    render_helper(data_gpu, vertices_gpu, colors_gpu, faces_gpu, Nv, Nf);
+
+    err = cudaDeviceSynchronize();
+    err = cudaMemcpy(data, data_gpu, sizeof(uint8_t) * ROWS * COLS * CHNS, cudaMemcpyDeviceToHost);
+
+    err = cudaFree(data_gpu);
+    err = cudaFree(vertices_gpu);
+    err = cudaFree(colors_gpu);
+    err = cudaFree(faces_gpu);
+    
+}
+
+
 
 //int render(uint8_t data[ROWS][COLS][CHNS], float vertices[][DIMS], float colors[][DIMS], uint32_t faces[][DIMS], const size_t N);
 

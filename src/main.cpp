@@ -10,13 +10,16 @@
 #include <opencv2/core/cuda_types.hpp>
 
 #include <cstdint>
+
+#ifdef __APPLE__
 #include <Foundation/Foundation.hpp>
 #include <Metal/Metal.hpp>
+#endif
 
 #include <render/render.hpp>
 
-#define ROWS    256
-#define COLS    256
+#define ROWS    64
+#define COLS    64
 #define CHNS    3
 #define DIMS    3
 
@@ -46,10 +49,14 @@ int main(int argc, char** argv) {
         {0, 1, 2},
         {3, 2, 1}
     };
-
+#ifdef __APPLE__
     NS::AutoreleasePool* p_pool = NS::AutoreleasePool::alloc()->init();
     MTL::Device* device = MTL::CreateSystemDefaultDevice();
-    metal_renderer* renderer = new metal_renderer(device);
+    MetalRenderer* renderer = new MetalRenderer(device);
+#endif
+#ifdef __gnu_linux__
+    CudaRenderer* renderer = new CudaRenderer();
+#endif
 
     uint Nv = 4;
     uint Nf = 2;
@@ -77,10 +84,9 @@ int main(int argc, char** argv) {
             faces_cpu[DIMS * i + j] = faces[i][j];
         }
     }
-    std::cout << "A" << std::endl;
     while (true) {
         for (int index = 0; index < ROWS * COLS; index++) {
-            renderer->helper_render(data_cpu, vertices_cpu, colors_cpu, faces_cpu, Nv, Nf);
+            renderer->render_vertices(data_cpu, vertices_cpu, colors_cpu, faces_cpu, Nv, Nf);
         }
         
         cv::Mat img(cv::Size(COLS, ROWS), CV_8UC3);
