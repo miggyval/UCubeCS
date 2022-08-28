@@ -35,7 +35,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <fast_obj.h>
+
 #include <kinect_streamer/kinect_streamer.hpp>
+
+
+#define CUBE
 
 int main(int argc, char** argv) {
 
@@ -43,8 +48,10 @@ int main(int argc, char** argv) {
     cv::resizeWindow("render", cv::Size(IMG_COLS, IMG_ROWS));
     
     uint8_t data[IMG_ROWS][IMG_COLS][IMG_CHNS] = {0};
-    float size = 0.3;
 
+#ifdef CUBE
+    float size = 0.25;
+    
     float vertices[][IMG_DIMS] = {
         {-size, -size,  size}, //0
         { size, -size,  size}, //1
@@ -55,6 +62,7 @@ int main(int argc, char** argv) {
         {-size,  size, -size}, //6
         { size,  size, -size}  //7
     };
+
 
     float colors[][IMG_DIMS] = {
         {0.0, 0.0, 1.0},
@@ -88,6 +96,16 @@ int main(int argc, char** argv) {
         {4, 5, 0}
     
     };
+    uint Nv = 8;
+    uint Nf = 12;
+#else
+    fastObjMesh* mesh = fast_obj_read("/home/valencimm/render_test/teapot.obj");
+    uint Nv = mesh->position_count;
+    uint Nf = mesh->index_count;
+    std::cout << Nf << std::endl;
+    std::cout << Nv << std::endl;
+    
+#endif
 
 #ifdef __APPLE__
     NS::AutoreleasePool* p_pool = NS::AutoreleasePool::alloc()->init();
@@ -98,14 +116,12 @@ int main(int argc, char** argv) {
     CudaRenderer* renderer = new CudaRenderer();
 #endif
 
-    uint Nv = 8;
-    uint Nf = 12;
 
     uint8_t* data_cpu = (uint8_t*)malloc(sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
     float* vertices_cpu = (float*)malloc(sizeof(float) *  Nv * 3);
     float* colors_cpu = (float*)malloc(sizeof(float) *  Nv * 3);
     uint* faces_cpu = (uint*)malloc(sizeof(uint) * Nf * 3);
-
+#ifdef CUBE
     for (int i = 0; i < Nv; i++) {
         for (int j = 0; j < IMG_DIMS; j++) {
             vertices_cpu[IMG_DIMS * i + j] = vertices[i][j];
@@ -118,6 +134,20 @@ int main(int argc, char** argv) {
             faces_cpu[IMG_DIMS * i + j] = faces[i][j];
         }
     }
+#else
+    for (int i = 0; i < Nv; i++) {
+        for (int j = 0; j < IMG_DIMS; j++) {
+            vertices_cpu[IMG_DIMS * i + j] = mesh->positions[IMG_DIMS * i + j] * 0.1;
+            colors_cpu[IMG_DIMS * i + j] = 255;
+        }
+    }
+
+    for (int i = 0; i < Nf; i++) {
+        for (int j = 0; j < IMG_DIMS; j++) {
+            faces_cpu[IMG_DIMS * i + j] = mesh->face_vertices[IMG_DIMS * i + j];
+        }
+    }
+#endif
     float theta_x = 0.0f;
     float theta_z = 0.0f;
 

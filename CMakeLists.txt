@@ -7,6 +7,7 @@ add_definitions(-DIMG_ROWS=1024)
 add_definitions(-DIMG_COLS=2048)
 add_definitions(-DIMG_CHNS=3)
 add_definitions(-DIMG_DIMS=3)
+add_subdirectory(fast_obj)
 
 if (UNIX)
     set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
@@ -61,7 +62,7 @@ elseif(UNIX)
     add_library(render_cuda src/render.cu)
     add_library(render src/render.cpp)
     add_executable(main src/main.cpp)
-    target_link_libraries( render ${OpenCV_LIBS} ${CUDART_LIBRARY} ${kinect_streamer_libs} ${PCL_LIBRARIES} ${freenect2_LIBRARIES} render_cuda )
+    target_link_libraries( render ${OpenCV_LIBS} ${CUDART_LIBRARY} ${kinect_streamer_libs} ${PCL_LIBRARIES} ${freenect2_LIBRARIES} render_cuda fast_obj_lib )
     
     target_link_libraries( main render kinect_streamer_lib )
 
