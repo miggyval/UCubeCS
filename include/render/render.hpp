@@ -32,7 +32,7 @@ public:
     void render_vertices(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf);
 };
 
-void render_helper(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf);
+void render_helper(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf);
 
 #endif
 

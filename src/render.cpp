@@ -117,6 +117,7 @@ void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors
    
     /* Create Buffers */
     uint8_t* data_gpu;
+    float* zbuffer_gpu;
     float* vertices_gpu;
     float* colors_gpu;
     uint* faces_gpu;
@@ -124,10 +125,8 @@ void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors
     cudaError_t err = cudaSuccess;
 
     err = cudaMalloc((void**)&data_gpu, sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
+    err = cudaMalloc((void**)&zbuffer_gpu, sizeof(float) * IMG_ROWS * IMG_COLS);
 
-    if (err != cudaSuccess) {
-        printf("%s %d\n\r", cudaGetErrorString(err), __LINE__);
-    }
     err = cudaMalloc((void**)&vertices_gpu, sizeof(float) * Nv * 3);
     err = cudaMalloc((void**)&colors_gpu, sizeof(float) * Nv * 3);
     err = cudaMalloc((void**)&faces_gpu, sizeof(uint) * Nf * 3);
@@ -136,12 +135,13 @@ void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors
     err = cudaMemcpy(colors_gpu, colors, sizeof(float) * Nv * 3, cudaMemcpyHostToDevice);
     err = cudaMemcpy(faces_gpu, faces, sizeof(uint) * Nf * 3, cudaMemcpyHostToDevice);
 
-    render_helper(data_gpu, vertices_gpu, colors_gpu, faces_gpu, Nv, Nf);
+    render_helper(data_gpu, zbuffer_gpu, vertices_gpu, colors_gpu, faces_gpu, Nv, Nf);
 
     err = cudaDeviceSynchronize();
     err = cudaMemcpy(data, data_gpu, sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS, cudaMemcpyDeviceToHost);
 
     err = cudaFree(data_gpu);
+    err = cudaFree(zbuffer_gpu);
     err = cudaFree(vertices_gpu);
     err = cudaFree(colors_gpu);
     err = cudaFree(faces_gpu);

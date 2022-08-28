@@ -4,7 +4,7 @@
 #include <cuda_runtime.h>
 #include <render/render.hpp>
 
-__global__ void render(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
+__global__ void render(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
 
     const size_t width = IMG_COLS;
     const size_t height = IMG_ROWS;
@@ -27,17 +27,36 @@ __global__ void render(uint8_t* data, float* vertices, float* colors, uint32_t* 
                 flag = 0;
             }
         }
-        if (flag) {
-            uint32_t idx1 = faces[3 * nf + 0];
-            uint32_t idx2 = faces[3 * nf + 1];
-            uint32_t idx3 = faces[3 * nf + 2];
 
-            float x1 = vertices[3 * idx1 + 0];
-            float y1 = vertices[3 * idx1 + 1];
-            float x2 = vertices[3 * idx2 + 0];
-            float y2 = vertices[3 * idx2 + 1];
-            float x3 = vertices[3 * idx3 + 0];
-            float y3 = vertices[3 * idx3 + 1];
+        uint32_t idx1 = faces[3 * nf + 0];
+        uint32_t idx2 = faces[3 * nf + 1];
+        uint32_t idx3 = faces[3 * nf + 2];
+        float x1 = vertices[3 * idx1 + 0];
+        float y1 = vertices[3 * idx1 + 1];
+        float z1 = vertices[3 * idx1 + 2];
+        float x2 = vertices[3 * idx2 + 0];
+        float y2 = vertices[3 * idx2 + 1];
+        float z2 = vertices[3 * idx2 + 2];
+        float x3 = vertices[3 * idx3 + 0];
+        float y3 = vertices[3 * idx3 + 1];
+        float z3 = vertices[3 * idx3 + 1];
+
+        if (flag) {
+            float xp = Px;
+            float yp = Py;
+            float a = (y2 - y1) * (z3 - z1) - (y3 - y1) * (z2 - z1);
+            float b = (z2 - z1) * (x3 - x1) - (z3 - z1) * (x2 - x1);
+            float c = (x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1);
+            float d = -(a * x1 + b * y1 + c * z1);
+            float zp = (1 - a * xp - b * yp - d) / c;
+            if (zp > zbuffer[index]) {
+                zbuffer[index] = zp;
+            } else {
+                flag = false;
+            }
+        }
+        if (flag) {
+
             float c1r = colors[3 * idx1 + 0];
             float c1g = colors[3 * idx1 + 1];
             float c1b = colors[3 * idx1 + 2];
@@ -73,9 +92,9 @@ __global__ void render(uint8_t* data, float* vertices, float* colors, uint32_t* 
 
 
 
-void render_helper(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
+void render_helper(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
     int numElements = IMG_ROWS * IMG_COLS;
     int threadsPerBlock = 1024;
     int blocksPerGrid = (numElements + threadsPerBlock - 1) / threadsPerBlock;
-    render<<<blocksPerGrid, threadsPerBlock>>>(data, vertices, colors, faces, Nv, Nf);
+    render<<<blocksPerGrid, threadsPerBlock>>>(data, zbuffer, vertices, colors, faces, Nv, Nf);
 }

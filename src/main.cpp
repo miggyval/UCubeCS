@@ -185,7 +185,6 @@ int main(int argc, char** argv) {
             kin_devs[serial]->release_frames();
         }
 
-        theta_x += 0.01f;
         theta_z += 0.01f;
         float rotation_z[3][3] = {
             {cos(theta_z), -sin(theta_z), 0},
@@ -199,7 +198,7 @@ int main(int argc, char** argv) {
             {0, sin(theta_x), cos(theta_x)}
         };
         
-        float* vertices_copy = (float*)malloc(sizeof(float) *  Nv * 3);
+        float* vertices_copy = (float*)malloc(sizeof(float) * Nv * 3);
         for (int nv = 0; nv < Nv; nv++) {
             for (int i = 0; i < 3; i++) {
                 vertices_copy[nv * 3 + i] = 0.0;
