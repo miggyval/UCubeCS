@@ -6,14 +6,14 @@
 
 __global__ void render(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
 
-    const size_t height = IMG_COLS;
-    const size_t width = IMG_ROWS;
+    const size_t width = IMG_COLS;
+    const size_t height = IMG_ROWS;
     int index = blockDim.x * blockIdx.x + threadIdx.x;
 
     int i = index / IMG_COLS;
     int j = index % IMG_COLS;
-    float Py = 2.0 * ((float)(height - i) / (float)height) - 1.0;
-    float Px = 2.0 * ((float)j / (float)width) - 1.0;
+    float Py = i;
+    float Px = j;
     for (size_t nf = 0; nf < Nf; nf++) {
         int flag = 1;
         for (size_t k = 0; k < IMG_DIMS; k++) {
@@ -63,9 +63,10 @@ __global__ void render(uint8_t* data, float* vertices, float* colors, uint32_t* 
                     l[i0] += mat[i0][j0] * p[j0];
                 }
             }
-            data[3 * index + 0] = (uint8_t)(255.0 * (l[0] * c1b + l[1] * c2b + l[2] * c3b));
-            data[3 * index + 1] = (uint8_t)(255.0 * (l[0] * c1g + l[1] * c2g + l[2] * c3g));
-            data[3 * index + 2] = (uint8_t)(255.0 * (l[0] * c1r + l[1] * c2r + l[2] * c3r));
+        
+            data[3 * index + 0] = (uint8_t)(255.0 * (l[0] * c1b + l[1] * c2b + l[2] * c3b) / (l[0] + l[1] + l[2]));
+            data[3 * index + 1] = (uint8_t)(255.0 * (l[0] * c1g + l[1] * c2g + l[2] * c3g) / (l[0] + l[1] + l[2]));
+            data[3 * index + 2] = (uint8_t)(255.0 * (l[0] * c1r + l[1] * c2r + l[2] * c3r) / (l[0] + l[1] + l[2]));
         }
     }
 }

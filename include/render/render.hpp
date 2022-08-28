@@ -6,6 +6,8 @@
 #include <Metal/Metal.hpp>
 #endif
 
+void projection(float cx, float cy, float fx, float fy, float* vp_arr, float* v_arr, int numPoints);
+
 #ifdef __APPLE__
 class MetalRenderer{
 public:

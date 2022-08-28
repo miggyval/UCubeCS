@@ -100,6 +100,14 @@ int MetalRenderer::init() {
 }
 #endif
 
+void projection(float cx, float cy, float fx, float fy, float* vp_arr, float* v_arr, int numPoints) {
+    for (int i = 0; i < numPoints; i++) {
+        vp_arr[3 * i] = fx * v_arr[3 * i] + cx;
+        vp_arr[3 * i + 1] = fy * v_arr[3 * i + 1] + cy;
+        vp_arr[3 * i + 2] = v_arr[3 * i + 2];
+    }
+}
+
 
 CudaRenderer::CudaRenderer() {
     
