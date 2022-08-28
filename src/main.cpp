@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
     cv::resizeWindow("render", cv::Size(IMG_COLS, IMG_ROWS));
     
     uint8_t data[IMG_ROWS][IMG_COLS][IMG_CHNS] = {0};
-    float size = 0.2;
+    float size = 0.3;
 
     float vertices[][IMG_DIMS] = {
         {-size, -size,  size}, //0
@@ -58,40 +58,35 @@ int main(int argc, char** argv) {
 
     float colors[][IMG_DIMS] = {
         {0.0, 0.0, 1.0},
-        {0.0, 1.0, 0.0},
+        {0.0, 0.7, 0.0},
         {1.0, 0.0, 0.0},
-        {0.0, 1.0, 1.0},
-        {1.0, 0.0, 1.0},
+        {0.0, 0.6, 1.0},
+        {1.0, 0.0, 0.5},
         {1.0, 1.0, 0.0},
-        {1.0, 1.0, 1.0},
+        {1.0, 1.0, 0.2},
         {0.1, 0.1, 0.1}
     };
 
     uint32_t faces[][IMG_DIMS] = {
-        //Top
-        //{2, 6, 7},
-        //{2, 3, 7},
-        {0, 1, 2},
-        {3, 2, 1},
-        //Bottom
-        {0, 4, 5},
-        {0, 1, 5},
-
-        //Left
-        {0, 2, 6},
-        {0, 4, 6},
-
-        //Right
-        {1, 3, 7},
-        {1, 5, 7},
-
-        //Front
-        {0, 2, 3},
+        // FRONT
         {0, 1, 3},
-
-        //Back
-        {4, 6, 7},
-        {4, 5, 7}
+        {2, 0, 3},
+        // BACK
+        {7, 5, 4},
+        {7, 4, 6},
+        // RIGHT
+        {1, 5, 7},
+        {3, 1, 7},
+        //LEFT
+        {4, 0, 2},
+        {4, 2, 6},
+        //TOP
+        {2, 3, 7},
+        {7, 6, 2},
+        //BOTTOM
+        {5, 1, 0},
+        {4, 5, 0}
+    
     };
 
 #ifdef __APPLE__
@@ -103,8 +98,8 @@ int main(int argc, char** argv) {
     CudaRenderer* renderer = new CudaRenderer();
 #endif
 
-    uint Nv = 4;
-    uint Nf = 8;
+    uint Nv = 8;
+    uint Nf = 12;
 
     uint8_t* data_cpu = (uint8_t*)malloc(sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
     float* vertices_cpu = (float*)malloc(sizeof(float) *  Nv * 3);
@@ -112,10 +107,8 @@ int main(int argc, char** argv) {
     uint* faces_cpu = (uint*)malloc(sizeof(uint) * Nf * 3);
 
     for (int i = 0; i < Nv; i++) {
-        vertices_cpu[IMG_DIMS * i + 0] = vertices[i][0];// * 1080 + 960;
-        vertices_cpu[IMG_DIMS * i + 1] = vertices[i][1];// * 1080 + 540;
-        vertices_cpu[IMG_DIMS * i + 2] = vertices[i][2];
         for (int j = 0; j < IMG_DIMS; j++) {
+            vertices_cpu[IMG_DIMS * i + j] = vertices[i][j];
             colors_cpu[IMG_DIMS * i + j] = colors[i][j];
         }
     }
@@ -184,8 +177,7 @@ int main(int argc, char** argv) {
             
             kin_devs[serial]->release_frames();
         }
-
-        theta_z += 0.01f;
+        
         float rotation_z[3][3] = {
             {cos(theta_z), -sin(theta_z), 0},
             {sin(theta_z), cos(theta_z), 0},
@@ -194,10 +186,11 @@ int main(int argc, char** argv) {
 
         float rotation_x[3][3] = {
             {1, 0, 0},
-            {0, cos(theta_x), sin(theta_x)},
+            {0, cos(theta_x), -sin(theta_x)},
             {0, sin(theta_x), cos(theta_x)}
         };
-        
+        theta_x += 0.05;
+        theta_z += 0.02;
         float* vertices_copy = (float*)malloc(sizeof(float) * Nv * 3);
         for (int nv = 0; nv < Nv; nv++) {
             for (int i = 0; i < 3; i++) {
@@ -208,7 +201,7 @@ int main(int argc, char** argv) {
             }
         }
         
-        float* vertices_copy1 = (float*)malloc(sizeof(float) *  Nv * 3);
+        float* vertices_copy1 = (float*)malloc(sizeof(float) * Nv * 3);
         for (int nv = 0; nv < Nv; nv++) {
             for (int i = 0; i < 3; i++) {
                 vertices_copy1[nv * 3 + i] = 0.0;
@@ -217,7 +210,7 @@ int main(int argc, char** argv) {
                 }
             }
         }
-        float* vertices_copy2 = (float*)malloc(sizeof(float) *  Nv * 3);
+        float* vertices_copy2 = (float*)malloc(sizeof(float) * Nv * 3);
 
         float cx, cy, fx, fy;
         for (std::string serial : serials) {

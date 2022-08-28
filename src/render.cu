@@ -49,7 +49,7 @@ __global__ void render(uint8_t* data, float* zbuffer, float* vertices, float* co
             float c = (x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1);
             float d = -(a * x1 + b * y1 + c * z1);
             float zp = (1 - a * xp - b * yp - d) / c;
-            if (zp > zbuffer[index]) {
+            if (zp < zbuffer[index]) {
                 zbuffer[index] = zp;
             } else {
                 flag = false;

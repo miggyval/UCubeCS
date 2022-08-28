@@ -102,9 +102,9 @@ int MetalRenderer::init() {
 
 void projection(float cx, float cy, float fx, float fy, float* vp_arr, float* v_arr, int numPoints) {
     for (int i = 0; i < numPoints; i++) {
-        vp_arr[3 * i] = fx * v_arr[3 * i] + cx;
-        vp_arr[3 * i + 1] = fy * v_arr[3 * i + 1] + cy;
-        vp_arr[3 * i + 2] = v_arr[3 * i + 2];
+        vp_arr[3 * i]       = fx * v_arr[3 * i + 0] + cx;
+        vp_arr[3 * i + 1]   = fy * v_arr[3 * i + 1] + cy;
+        vp_arr[3 * i + 2]   =      v_arr[3 * i + 2];
     }
 }
 
@@ -123,6 +123,10 @@ void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors
     uint* faces_gpu;
 
     cudaError_t err = cudaSuccess;
+    float* zbuffer = (float*)malloc(sizeof(float) * IMG_ROWS * IMG_COLS);
+    for (int i = 0; i < IMG_ROWS * IMG_COLS; i++) {
+        zbuffer[i] = 10000.0;
+    }
 
     err = cudaMalloc((void**)&data_gpu, sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
     err = cudaMalloc((void**)&zbuffer_gpu, sizeof(float) * IMG_ROWS * IMG_COLS);
@@ -131,6 +135,7 @@ void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors
     err = cudaMalloc((void**)&colors_gpu, sizeof(float) * Nv * 3);
     err = cudaMalloc((void**)&faces_gpu, sizeof(uint) * Nf * 3);
 
+    err = cudaMemcpy(zbuffer_gpu, zbuffer, sizeof(float) * IMG_ROWS * IMG_COLS, cudaMemcpyHostToDevice);
     err = cudaMemcpy(vertices_gpu, vertices, sizeof(float) * Nv * 3, cudaMemcpyHostToDevice);
     err = cudaMemcpy(colors_gpu, colors, sizeof(float) * Nv * 3, cudaMemcpyHostToDevice);
     err = cudaMemcpy(faces_gpu, faces, sizeof(uint) * Nf * 3, cudaMemcpyHostToDevice);
@@ -145,6 +150,7 @@ void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors
     err = cudaFree(vertices_gpu);
     err = cudaFree(colors_gpu);
     err = cudaFree(faces_gpu);
+    free(zbuffer);
 
     err = cudaGetLastError();
     
