@@ -43,25 +43,55 @@ int main(int argc, char** argv) {
     cv::resizeWindow("render", cv::Size(IMG_COLS, IMG_ROWS));
     
     uint8_t data[IMG_ROWS][IMG_COLS][IMG_CHNS] = {0};
-    float size = 0.4;
+    float size = 0.2;
 
     float vertices[][IMG_DIMS] = {
-        {-size, -size, -1.0},
-        {size, -size, -1.0},
-        {-size, size, -1.0},
-        {size, size, -1.0},
+        {-size, -size,  size}, //0
+        { size, -size,  size}, //1
+        {-size,  size,  size}, //2
+        { size,  size,  size}, //3
+        {-size, -size, -size}, //4
+        { size, -size, -size}, //5
+        {-size,  size, -size}, //6
+        { size,  size, -size}  //7
     };
 
     float colors[][IMG_DIMS] = {
         {0.0, 0.0, 1.0},
         {0.0, 1.0, 0.0},
         {1.0, 0.0, 0.0},
-        {0.0, 1.0, 1.0}
+        {0.0, 1.0, 1.0},
+        {1.0, 0.0, 1.0},
+        {1.0, 1.0, 0.0},
+        {1.0, 1.0, 1.0},
+        {0.1, 0.1, 0.1}
     };
 
     uint32_t faces[][IMG_DIMS] = {
+        //Top
+        //{2, 6, 7},
+        //{2, 3, 7},
         {0, 1, 2},
-        {3, 2, 1}
+        {3, 2, 1},
+        //Bottom
+        {0, 4, 5},
+        {0, 1, 5},
+
+        //Left
+        {0, 2, 6},
+        {0, 4, 6},
+
+        //Right
+        {1, 3, 7},
+        {1, 5, 7},
+
+        //Front
+        {0, 2, 3},
+        {0, 1, 3},
+
+        //Back
+        {4, 6, 7},
+        {4, 5, 7}
     };
 
 #ifdef __APPLE__
@@ -74,7 +104,7 @@ int main(int argc, char** argv) {
 #endif
 
     uint Nv = 4;
-    uint Nf = 1;
+    uint Nf = 8;
 
     uint8_t* data_cpu = (uint8_t*)malloc(sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
     float* vertices_cpu = (float*)malloc(sizeof(float) *  Nv * 3);
@@ -97,8 +127,6 @@ int main(int argc, char** argv) {
     }
     float theta_x = 0.0f;
     float theta_z = 0.0f;
-    float* vertices_copy = (float*)malloc(sizeof(float) *  Nv * 3);
-    memcpy(vertices_copy, vertices_cpu, sizeof(float) *  Nv * 3);
 
     libfreenect2::setGlobalLogger(NULL);
     libfreenect2::Freenect2 freenect2;
@@ -158,6 +186,7 @@ int main(int argc, char** argv) {
         }
 
         theta_x += 0.01f;
+        theta_z += 0.01f;
         float rotation_z[3][3] = {
             {cos(theta_z), -sin(theta_z), 0},
             {sin(theta_z), cos(theta_z), 0},
@@ -170,21 +199,34 @@ int main(int argc, char** argv) {
             {0, sin(theta_x), cos(theta_x)}
         };
         
+        float* vertices_copy = (float*)malloc(sizeof(float) *  Nv * 3);
         for (int nv = 0; nv < Nv; nv++) {
             for (int i = 0; i < 3; i++) {
-                //vertices_cpu[nv * 3 + i] = 0.0;
+                vertices_copy[nv * 3 + i] = 0.0;
                 for (int j = 0; j < 3; j++) {
-                    //vertices_cpu[nv * 3 + i] += rotation_x[i][j] * vertices_copy[nv * 3 + j];
+                    vertices_copy[nv * 3 + i] += rotation_z[i][j] * vertices_cpu[nv * 3 + j];
                 }
             }
         }
+        
+        float* vertices_copy1 = (float*)malloc(sizeof(float) *  Nv * 3);
+        for (int nv = 0; nv < Nv; nv++) {
+            for (int i = 0; i < 3; i++) {
+                vertices_copy1[nv * 3 + i] = 0.0;
+                for (int j = 0; j < 3; j++) {
+                    vertices_copy1[nv * 3 + i] += rotation_x[i][j] * vertices_copy[nv * 3 + j];
+                }
+            }
+        }
+        float* vertices_copy2 = (float*)malloc(sizeof(float) *  Nv * 3);
+
         float cx, cy, fx, fy;
         for (std::string serial : serials) {
             kin_devs[serial]->get_color_params(cx, cy, fx, fy);
-            projection(cx, cy, fx, fy, vertices_cpu, vertices_copy, Nv);
+            projection(cx, cy, fx, fy, vertices_copy2, vertices_copy1, Nv);
         }
 
-        renderer->render_vertices(data_cpu, vertices_cpu, colors_cpu, faces_cpu, Nv, Nf);
+        renderer->render_vertices(data_cpu, vertices_copy2, colors_cpu, faces_cpu, Nv, Nf);
         
         cv::Mat img(cv::Size(IMG_COLS, IMG_ROWS), CV_8UC3);
         for (size_t i = 0; i < IMG_ROWS; i++) {
@@ -195,9 +237,11 @@ int main(int argc, char** argv) {
 
         cv::imshow("render", img);
         cv::waitKey(1);
+        free(vertices_copy);
+        free(vertices_copy1);
+        free(vertices_copy2);
     }
 
-    free(vertices_copy);
     free(data_cpu);
     free(vertices_cpu);
     free(colors_cpu);
