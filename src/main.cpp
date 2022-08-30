@@ -35,10 +35,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <fast_obj.h>
-
 #include <kinect_streamer/kinect_streamer.hpp>
-
 
 #define CUBE
 
@@ -98,12 +95,6 @@ int main(int argc, char** argv) {
     };
     uint Nv = 8;
     uint Nf = 12;
-#else
-    fastObjMesh* mesh = fast_obj_read("/home/valencimm/render_test/teapot.obj");
-    uint Nv = mesh->position_count;
-    uint Nf = mesh->index_count;
-    std::cout << Nf << std::endl;
-    std::cout << Nv << std::endl;
     
 #endif
 
@@ -111,6 +102,7 @@ int main(int argc, char** argv) {
     NS::AutoreleasePool* p_pool = NS::AutoreleasePool::alloc()->init();
     MTL::Device* device = MTL::CreateSystemDefaultDevice();
     MetalRenderer* renderer = new MetalRenderer(device);
+    renderer->init();
 #endif
 #ifdef __gnu_linux__
     CudaRenderer* renderer = new CudaRenderer();
@@ -150,64 +142,6 @@ int main(int argc, char** argv) {
 #endif
     float theta_x = 0.0f;
     float theta_z = 0.0f;
-
-    // libfreenect2::setGlobalLogger(NULL);
-    // libfreenect2::Freenect2 freenect2;
-    // std::map<std::string, KinectStreamer::KinectDevice*> kin_devs;
-    // std::vector<std::string> serials;
-    // int num_devices = freenect2.enumerateDevices();
-    // if (num_devices == 0) {
-    //     std::cout << "No devices detected!" << "\n\r";
-    //     exit(-1);
-    // } else {
-    //     std::cout << "Connected devices:" << "\n\r";
-    //     for (int idx = 0; idx < num_devices; idx++) {
-    //         std::cout << "- " << freenect2.getDeviceSerialNumber(idx) << "\n\r";
-    //         serials.push_back(freenect2.getDeviceSerialNumber(idx));
-    //     }
-    // }
-
-    // int n = serials.size();
-
-    // for (std::string serial : serials) {
-    //     KinectStreamer::KinectDevice* kin_dev = new KinectStreamer::KinectDevice(serial);
-    //     if (!kin_dev->start()) {
-    //         std::cout << "Failed to start Kinect Serial no.: " << serial << std::endl;
-    //         exit(-1);
-    //     }
-    //     kin_dev->init_registration();
-    //     kin_dev->init_params();
-    //     kin_devs[serial] = kin_dev;
-    // }
-
-
-    // for (std::string serial : serials) {
-    //     cv::namedWindow(serial, cv::WINDOW_NORMAL);
-    //     cv::resizeWindow(serial, cv::Size(1280, 720));
-    // }
-
-    while (true) {
-        
-        
-        // for (std::string serial : serials) {
-        //     kin_devs[serial]->KinectDevice::wait_frames();
-
-        //     libfreenect2::Frame* color = kin_devs[serial]->get_frame(libfreenect2::Frame::Color);
-        //     libfreenect2::Frame* depth = kin_devs[serial]->get_frame(libfreenect2::Frame::Depth);
-
-        //     cv::Mat img_color(cv::Size(color->width, color->height), CV_8UC4, color->data);
-        //     cv::Mat img_depth(cv::Size(depth->width, depth->height), CV_32FC1, depth->data);
-
-
-        //     cv::Mat img_bgr;
-        //     cv::cvtColor(img_color, img_bgr, cv::COLOR_BGRA2BGR);
-        //     cv::flip(img_bgr, img_bgr, 1);
-        //     cv::imshow(serial, img_bgr);
-        //     cv::waitKey(1);
-            
-        //     kin_devs[serial]->release_frames();
-        // }
-        
         float rotation_z[3][3] = {
             {cos(theta_z), -sin(theta_z), 0},
             {sin(theta_z), cos(theta_z), 0},
@@ -247,9 +181,7 @@ int main(int argc, char** argv) {
         cy = 1080 / 2;
         fx = 1080;
         fy = 1080;
-        // for (std::string serial : serials) {
-        //     kin_devs[serial]->get_color_params(cx, cy, fx, fy);
-        // }
+
         projection(cx, cy, fx, fy, vertices_copy2, vertices_copy1, Nv);
 
         renderer->render_vertices(data_cpu, vertices_copy2, colors_cpu, faces_cpu, Nv, Nf);

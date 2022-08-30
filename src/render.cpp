@@ -20,16 +20,16 @@
 #ifdef __APPLE__
 #include <Foundation/Foundation.hpp>
 #include <Metal/Metal.hpp>
-#include <metal_adder/metal_adder.hpp>
 #endif
 
-#if __gnu_linux__
+#ifdef __gnu_linux__
 
 #include <cuda_runtime.h>
 
 #endif
 
 #include <render/render.hpp>
+#include <kinect_streamer/kinect_streamer.hpp>
 
 
 #ifdef __APPLE__
@@ -37,22 +37,23 @@ MetalRenderer::MetalRenderer(MTL::Device* device) : _device(device) {}
 
 void MetalRenderer::render_vertices(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
     
-    /* Create Buffers */
     MTL::Buffer* data_gpu;
     MTL::Buffer* vertices_gpu;
     MTL::Buffer* colors_gpu;
     MTL::Buffer* faces_gpu;
-
+    
     data_gpu = _device->newBuffer(sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS, MTL::ResourceStorageModeShared);
     vertices_gpu = _device->newBuffer(sizeof(float) * Nv * 3, MTL::ResourceStorageModeShared);
     colors_gpu = _device->newBuffer(sizeof(float) *  Nv * 3, MTL::ResourceStorageModeShared);
     faces_gpu = _device->newBuffer(sizeof(uint) * Nf * 3, MTL::ResourceStorageModeShared);
-
+    
     MTL::CommandBuffer* command_buffer = _CommandQueue->commandBuffer();
+    
     MTL::ComputeCommandEncoder* compute_encoder = command_buffer->computeCommandEncoder();
     
+    
     compute_encoder->setComputePipelineState(_addFunctionPSO);
-
+    
     compute_encoder->setBuffer(data_gpu, 0, 0);
     compute_encoder->setBuffer(vertices_gpu, 0, 1);
     compute_encoder->setBuffer(colors_gpu, 0, 2);
@@ -68,9 +69,13 @@ void MetalRenderer::render_vertices(uint8_t* data, float* vertices, float* color
     MTL::Size thread_group_size = MTL::Size(_thread_group_size, 1, 1);
     
     compute_encoder->dispatchThreads(grid_size, thread_group_size);
+
+
+    
     compute_encoder->endEncoding();
     command_buffer->commit();
     command_buffer->waitUntilCompleted();
+
 }
 
 
@@ -107,7 +112,7 @@ void projection(float cx, float cy, float fx, float fy, float* vp_arr, float* v_
         vp_arr[3 * i + 2]   =      v_arr[3 * i + 2];
     }
 }
-
+#ifdef __gnu_linux__
 
 CudaRenderer::CudaRenderer() {
     
@@ -155,3 +160,5 @@ void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors
     err = cudaGetLastError();
     
 }
+
+#endif
