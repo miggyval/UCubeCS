@@ -1,23 +1,19 @@
 #include <metal_stdlib>
 
-#define ROWS    256
-#define COLS    256
-#define CHNS    3
-#define DIMS    3
+#define IMG_ROWS    1024
+#define IMG_COLS    1024
+#define IMG_CHNS    3
+#define IMG_DIMS    3
 
 using namespace metal;
 
 kernel void render(device uint8_t* data, device float* zbuffer, device const float* vertices, device const float* colors, device uint32_t* faces, const device uint* Nf, const device uint* Nv, uint index [[thread_position_in_grid]]) {
-   
-    const size_t width = IMG_COLS;
-    const size_t height = IMG_ROWS;
-    int index = blockDim.x * blockIdx.x + threadIdx.x;
-
     int i = index / IMG_COLS;
     int j = index % IMG_COLS;
+
     float Py = i;
     float Px = j;
-    for (size_t nf = 0; nf < Nf; nf++) {
+    for (size_t nf = 0; nf < *Nf; nf++) {
         int flag = 1;
         for (size_t k = 0; k < IMG_DIMS; k++) {
             uint32_t idx1 = faces[IMG_DIMS * nf + k];
@@ -30,7 +26,6 @@ kernel void render(device uint8_t* data, device float* zbuffer, device const flo
                 flag = 0;
             }
         }
-
         uint32_t idx1 = faces[3 * nf + 0];
         uint32_t idx2 = faces[3 * nf + 1];
         uint32_t idx3 = faces[3 * nf + 2];

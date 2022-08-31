@@ -37,27 +37,49 @@ MetalRenderer::MetalRenderer(MTL::Device* device) : _device(device) {}
 
 void MetalRenderer::render_vertices(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
     
+
+    float* zbuffer = (float*)malloc(sizeof(float) * IMG_ROWS * IMG_COLS);
+    for (int i = 0; i < IMG_ROWS * IMG_COLS; i++) {
+        zbuffer[i] = 10000.0;
+    }
+
     MTL::Buffer* data_gpu;
+    MTL::Buffer* zbuffer_gpu;
     MTL::Buffer* vertices_gpu;
     MTL::Buffer* colors_gpu;
     MTL::Buffer* faces_gpu;
+    MTL::Buffer* Nf_gpu;
+    MTL::Buffer* Nv_gpu;
     
     data_gpu = _device->newBuffer(sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS, MTL::ResourceStorageModeShared);
+    zbuffer_gpu = _device->newBuffer(sizeof(float) * IMG_ROWS * IMG_COLS, MTL::ResourceStorageModeShared);
     vertices_gpu = _device->newBuffer(sizeof(float) * Nv * 3, MTL::ResourceStorageModeShared);
     colors_gpu = _device->newBuffer(sizeof(float) *  Nv * 3, MTL::ResourceStorageModeShared);
     faces_gpu = _device->newBuffer(sizeof(uint) * Nf * 3, MTL::ResourceStorageModeShared);
+    Nf_gpu = _device->newBuffer(sizeof(uint), MTL::ResourceStorageModeShared);
+    Nv_gpu = _device->newBuffer(sizeof(uint), MTL::ResourceStorageModeShared);
     
+
+    memcpy( zbuffer_gpu->contents(), zbuffer, sizeof(float) * IMG_ROWS * IMG_COLS);
+    memcpy( vertices_gpu->contents(), vertices, sizeof(float) * Nv * 3);
+    memcpy( colors_gpu->contents(), colors, sizeof(float) * Nv * 3);
+    memcpy( faces_gpu->contents(), faces, sizeof(uint) * Nf * 3);
+    memcpy( Nf_gpu->contents(), &Nf, sizeof(uint));
+    memcpy( Nv_gpu->contents(), &Nv, sizeof(uint));
+
     MTL::CommandBuffer* command_buffer = _CommandQueue->commandBuffer();
     
     MTL::ComputeCommandEncoder* compute_encoder = command_buffer->computeCommandEncoder();
     
     
     compute_encoder->setComputePipelineState(_addFunctionPSO);
-    
     compute_encoder->setBuffer(data_gpu, 0, 0);
-    compute_encoder->setBuffer(vertices_gpu, 0, 1);
-    compute_encoder->setBuffer(colors_gpu, 0, 2);
-    compute_encoder->setBuffer(faces_gpu, 0, 3);
+    compute_encoder->setBuffer(zbuffer_gpu, 0, 1);
+    compute_encoder->setBuffer(vertices_gpu, 0, 2);
+    compute_encoder->setBuffer(colors_gpu, 0, 3);
+    compute_encoder->setBuffer(faces_gpu, 0, 4);
+    compute_encoder->setBuffer(Nf_gpu, 0, 5);
+    compute_encoder->setBuffer(Nv_gpu, 0, 6);
     
     MTL::Size grid_size = MTL::Size(IMG_ROWS * IMG_COLS, 1, 1);
     
@@ -69,13 +91,10 @@ void MetalRenderer::render_vertices(uint8_t* data, float* vertices, float* color
     MTL::Size thread_group_size = MTL::Size(_thread_group_size, 1, 1);
     
     compute_encoder->dispatchThreads(grid_size, thread_group_size);
-
-
-    
     compute_encoder->endEncoding();
     command_buffer->commit();
     command_buffer->waitUntilCompleted();
-
+    memcpy( data, data_gpu->contents(), sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
 }
 
 

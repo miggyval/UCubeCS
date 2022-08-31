@@ -2,11 +2,12 @@ cmake_minimum_required( VERSION 3.10 )
 
 project( render_test )
 
-
 add_definitions(-DIMG_ROWS=1024)
-add_definitions(-DIMG_COLS=2048)
+add_definitions(-DIMG_COLS=1024)
 add_definitions(-DIMG_CHNS=3)
 add_definitions(-DIMG_DIMS=3)
+
+
 if (APPLE)
 elseif (UNIX)
     set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
@@ -56,10 +57,18 @@ endif()
 if (APPLE)
     add_library( render src/render.cpp )
     add_executable( main src/main.cpp )
+
+    add_custom_command(
+        TARGET render
+        COMMAND xcrun -sdk macosx metal -c ../src/render.metal -o ../build/render.air && xcrun -sdk macosx metallib ../build/render.air -o ../build/render.metallib
+        VERBATIM
+        USES_TERMINAL
+    )
     target_link_libraries( render ${OpenCV_LIBS} ${freenect2_LIBRARIES} kinect_streamer_lib "-framework Metal" "-framework Foundation" "-framework QuartzCore")
     target_link_libraries( main render kinect_streamer_lib)
     set_target_properties( render PROPERTIES CXX_STANDARD 17 )
     set_target_properties( main PROPERTIES CXX_STANDARD 17 )
+    
 
 elseif(UNIX)
     add_library(render_cuda src/render.cu)

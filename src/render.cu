@@ -5,9 +5,7 @@
 #include <render/render.hpp>
 
 __global__ void render(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
-
-    const size_t width = IMG_COLS;
-    const size_t height = IMG_ROWS;
+    
     int index = blockDim.x * blockIdx.x + threadIdx.x;
 
     int i = index / IMG_COLS;

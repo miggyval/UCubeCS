@@ -142,6 +142,10 @@ int main(int argc, char** argv) {
 #endif
     float theta_x = 0.0f;
     float theta_z = 0.0f;
+<<<<<<< HEAD
+=======
+    while (true) {
+>>>>>>> f6f0891 (Got it working on METAL)
         float rotation_z[3][3] = {
             {cos(theta_z), -sin(theta_z), 0},
             {sin(theta_z), cos(theta_z), 0},
@@ -177,11 +181,19 @@ int main(int argc, char** argv) {
         float* vertices_copy2 = (float*)malloc(sizeof(float) * Nv * 3);
 
         float cx, cy, fx, fy;
+<<<<<<< HEAD
         cx = 1920 / 2;
         cy = 1080 / 2;
         fx = 1080;
         fy = 1080;
 
+=======
+        cx = 1024 / 2;
+        cy = 1024 / 2;
+        fx = 1024;
+        fy = 1024;
+        
+>>>>>>> f6f0891 (Got it working on METAL)
         projection(cx, cy, fx, fy, vertices_copy2, vertices_copy1, Nv);
 
         renderer->render_vertices(data_cpu, vertices_copy2, colors_cpu, faces_cpu, Nv, Nf);
@@ -204,6 +216,7 @@ int main(int argc, char** argv) {
     free(vertices_cpu);
     free(colors_cpu);
     free(faces_cpu);
+    p_pool->release();
 
     return 0;
 }
