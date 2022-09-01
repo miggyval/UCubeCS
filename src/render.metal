@@ -11,7 +11,7 @@ kernel void render(device uint8_t* data, device float* zbuffer, device const flo
     int i = index / IMG_COLS;
     int j = index % IMG_COLS;
 
-    float Py = i;
+    float Py = IMG_ROWS - i;
     float Px = j;
     for (size_t nf = 0; nf < *Nf; nf++) {
         int flag = 1;
@@ -22,7 +22,8 @@ kernel void render(device uint8_t* data, device float* zbuffer, device const flo
             float V0y = vertices[IMG_DIMS * idx1 + 1];
             float V1x = vertices[IMG_DIMS * idx2 + 0];
             float V1y = vertices[IMG_DIMS * idx2 + 1];
-            if ((Px - V0x) * (V1y - V0y) > (Py - V0y) * (V1x - V0x)) {
+            float val = (Px - V0x) * (V1y - V0y) - (Py - V0y) * (V1x - V0x);
+            if (val > 0) {
                 flag = 0;
             }
         }

@@ -10,8 +10,9 @@ __global__ void render(uint8_t* data, float* zbuffer, float* vertices, float* co
 
     int i = index / IMG_COLS;
     int j = index % IMG_COLS;
-    float Py = i;
+    float Py = IMG_ROWS - i;
     float Px = j;
+
     for (size_t nf = 0; nf < Nf; nf++) {
         int flag = 1;
         for (size_t k = 0; k < IMG_DIMS; k++) {

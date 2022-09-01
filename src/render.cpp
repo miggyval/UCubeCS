@@ -1,20 +1,5 @@
 #include <iostream>
 #include <cstdint>
-
-#ifdef __APPLE__
-#define NS_PRIVATE_IMPLEMENTATION
-#define CA_PRIVATE_IMPLEMENTATION
-#define MTL_PRIVATE_IMPLEMENTATION
-#endif
-
-#include <opencv2/opencv.hpp>
-#include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/core/cuda.hpp>
-#include <opencv2/core/cuda.inl.hpp>
-#include <opencv2/core/cuda_types.hpp>
-#include <opencv2/core/cuda_types.hpp>
-
 #include <cstdint>
 
 #ifdef __APPLE__
@@ -35,13 +20,7 @@
 #ifdef __APPLE__
 MetalRenderer::MetalRenderer(MTL::Device* device) : _device(device) {}
 
-void MetalRenderer::render_vertices(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
-    
-
-    float* zbuffer = (float*)malloc(sizeof(float) * IMG_ROWS * IMG_COLS);
-    for (int i = 0; i < IMG_ROWS * IMG_COLS; i++) {
-        zbuffer[i] = 10000.0;
-    }
+void MetalRenderer::render_vertices(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
 
     MTL::Buffer* data_gpu;
     MTL::Buffer* zbuffer_gpu;
@@ -60,6 +39,7 @@ void MetalRenderer::render_vertices(uint8_t* data, float* vertices, float* color
     Nv_gpu = _device->newBuffer(sizeof(uint), MTL::ResourceStorageModeShared);
     
 
+    memcpy( data_gpu->contents(), data, sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
     memcpy( zbuffer_gpu->contents(), zbuffer, sizeof(float) * IMG_ROWS * IMG_COLS);
     memcpy( vertices_gpu->contents(), vertices, sizeof(float) * Nv * 3);
     memcpy( colors_gpu->contents(), colors, sizeof(float) * Nv * 3);
@@ -101,7 +81,7 @@ void MetalRenderer::render_vertices(uint8_t* data, float* vertices, float* color
 int MetalRenderer::init() {
     
     NS::Error* error;
-    NS::String* filePath = NS::String::string("/Users/valencimm/render_test/src/render.metallib", NS::UTF8StringEncoding);
+    NS::String* filePath = NS::String::string("/Users/valencimm/render_test/build/render.metallib", NS::UTF8StringEncoding);
 
     auto lib = _device->newDefaultLibrary();
     lib = _device->newLibrary(filePath, &error);
@@ -124,13 +104,6 @@ int MetalRenderer::init() {
 }
 #endif
 
-void projection(float cx, float cy, float fx, float fy, float* vp_arr, float* v_arr, int numPoints) {
-    for (int i = 0; i < numPoints; i++) {
-        vp_arr[3 * i]       = fx * v_arr[3 * i + 0] + cx;
-        vp_arr[3 * i + 1]   = fy * v_arr[3 * i + 1] + cy;
-        vp_arr[3 * i + 2]   =      v_arr[3 * i + 2];
-    }
-}
 #ifdef __gnu_linux__
 
 CudaRenderer::CudaRenderer() {

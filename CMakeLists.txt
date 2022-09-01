@@ -7,6 +7,8 @@ add_definitions(-DIMG_COLS=1024)
 add_definitions(-DIMG_CHNS=3)
 add_definitions(-DIMG_DIMS=3)
 
+add_subdirectory(tinyobjloader)
+
 
 if (APPLE)
 elseif (UNIX)
@@ -41,9 +43,11 @@ endif()
 
 include_directories(
     include
+    ${TINYOBJLOADER_INCLUDE_DIR}
     ${OpenCV_INCLUDE_DIRS}
     ${freenect2_INCLUDE_DIRS}
     ${PCL_INCLUDE_DIRS}
+    ${tiny}
 )
 
 include_directories("$ENV{HOME}/kinect_streamer_lib/include/")
@@ -56,6 +60,7 @@ endif()
 
 if (APPLE)
     add_library( render src/render.cpp )
+    add_library( transform src/transform.cpp )
     add_executable( main src/main.cpp )
 
     add_custom_command(
@@ -64,9 +69,17 @@ if (APPLE)
         VERBATIM
         USES_TERMINAL
     )
+    add_custom_command(
+        TARGET transform
+        COMMAND xcrun -sdk macosx metal -c ../src/transform.metal -o ../build/transform.air && xcrun -sdk macosx metallib ../build/transform.air -o ../build/transform.metallib
+        VERBATIM
+        USES_TERMINAL
+    )
     target_link_libraries( render ${OpenCV_LIBS} ${freenect2_LIBRARIES} kinect_streamer_lib "-framework Metal" "-framework Foundation" "-framework QuartzCore")
-    target_link_libraries( main render kinect_streamer_lib)
+    target_link_libraries( transform ${OpenCV_LIBS} ${freenect2_LIBRARIES} kinect_streamer_lib "-framework Metal" "-framework Foundation" "-framework QuartzCore")
+    target_link_libraries( main render transform tinyobjloader kinect_streamer_lib)
     set_target_properties( render PROPERTIES CXX_STANDARD 17 )
+    set_target_properties( transform PROPERTIES CXX_STANDARD 17 )
     set_target_properties( main PROPERTIES CXX_STANDARD 17 )
     
 
@@ -75,7 +88,6 @@ elseif(UNIX)
     add_library(render src/render.cpp)
     add_executable(main src/main.cpp)
     target_link_libraries( render ${OpenCV_LIBS} ${CUDART_LIBRARY} ${PCL_LIBRARIES} ${freenect2_LIBRARIES} render_cuda fast_obj_lib )
-    
-    target_link_libraries( main render kinect_streamer_lib )
+    target_link_libraries( transform ${OpenCV_LIBS} ${CUDART_LIBRARY} ${PCL_LIBRARIES} ${freenect2_LIBRARIES} render_cuda fast_obj_lib )
 
 endif()

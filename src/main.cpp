@@ -14,9 +14,11 @@
 #ifdef __APPLE__
 #include <Foundation/Foundation.hpp>
 #include <Metal/Metal.hpp>
+#include "tiny_obj_loader.h"
 #endif
 
 #include <render/render.hpp>
+#include <transform/transform.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -35,9 +37,16 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <kinect_streamer/kinect_streamer.hpp>
+#define CUBE 
 
-#define CUBE
+void projection(float cx, float cy, float fx, float fy, float* vp_arr, float* v_arr, int numPoints);
+void projection(float cx, float cy, float fx, float fy, float* vp_arr, float* v_arr, int numPoints) {
+    for (int i = 0; i < numPoints; i++) {
+        vp_arr[3 * i]       = fx * v_arr[3 * i + 0] + cx;
+        vp_arr[3 * i + 1]   = fy * v_arr[3 * i + 1] + cy;
+        vp_arr[3 * i + 2]   =      v_arr[3 * i + 2];
+    }
+}
 
 int main(int argc, char** argv) {
 
@@ -46,9 +55,14 @@ int main(int argc, char** argv) {
     
     uint8_t data[IMG_ROWS][IMG_COLS][IMG_CHNS] = {0};
 
+
+
+
 #ifdef CUBE
-    float size = 0.25;
-    
+    float size = 0.15;
+
+    uint Nv = 8;
+    uint Nf = 12;
     float vertices[][IMG_DIMS] = {
         {-size, -size,  size}, //0
         { size, -size,  size}, //1
@@ -69,7 +83,7 @@ int main(int argc, char** argv) {
         {1.0, 0.0, 0.5},
         {1.0, 1.0, 0.0},
         {1.0, 1.0, 0.2},
-        {0.1, 0.1, 0.1}
+        {0.1, 0.9, 0.1}
     };
 
     uint32_t faces[][IMG_DIMS] = {
@@ -91,28 +105,82 @@ int main(int argc, char** argv) {
         //BOTTOM
         {5, 1, 0},
         {4, 5, 0}
-    
     };
-    uint Nv = 8;
-    uint Nf = 12;
-    
-#endif
 
+    uint8_t* data_cpu = (uint8_t*)malloc(sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
+    float* vertices_cpu = (float*)malloc(sizeof(float) * Nv * 3);
+    float* colors_cpu = (float*)malloc(sizeof(float) *  Nv * 3);
+    uint* faces_cpu = (uint*)malloc(sizeof(uint) * Nf * 3);
+    
+#else
+    std::string inputfile = "../src/teapot.obj";
+    tinyobj::ObjReaderConfig reader_config;
+    reader_config.mtl_search_path = "./"; // Path to material files
+
+    tinyobj::ObjReader reader;
+
+    if (!reader.ParseFromFile(inputfile, reader_config)) {
+        if (!reader.Error().empty()) {
+            std::cerr << "TinyObjReader: " << reader.Error();
+        }
+        exit(-1);
+    }
+
+    if (!reader.Warning().empty()) {
+        std::cout << "TinyObjReader: " << reader.Warning();
+    }
+
+    auto& attrib = reader.GetAttrib();
+    auto& shapes = reader.GetShapes();
+    auto& materials = reader.GetMaterials();
+    uint Nf = 0;
+    uint Nv = 0;
+    for (size_t s = 0; s < shapes.size(); s++) { 
+        Nv += shapes[s].mesh.num_face_vertices.size();
+        Nf += shapes[s].mesh.indices.size();
+    }
+
+
+    uint8_t* data_cpu = (uint8_t*)malloc(sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
+    float* vertices_cpu = (float*)malloc(sizeof(float) * Nv * 3);
+    float* colors_cpu = (float*)malloc(sizeof(float) *  Nv * 3);
+    uint* faces_cpu = (uint*)malloc(sizeof(uint) * Nf * 3);
+    int count = 0;
+    memcpy(vertices_cpu, attrib.vertices.data(), sizeof(float) * Nv * 3);
+    for (size_t s = 0; s < shapes.size(); s++) {
+        // Loop over faces(polygon)
+        size_t index_offset = 0;
+        for (size_t i = 0; i < shapes[s].mesh.indices.size(); i++) {
+            faces_cpu[count++] = shapes[s].mesh.indices[i].vertex_index;
+        }
+    }
+
+    for (int i = 0; i < Nf; i++) {
+        vertices_cpu[3 * i + 0] *= 0.1;
+        vertices_cpu[3 * i + 1] *= 0.1;
+        vertices_cpu[3 * i + 2] *= 0.1;
+    }
+
+    for (int i = 0; i < Nv; i++) {
+        for (int j = 0; j < IMG_DIMS; j++) {
+            colors_cpu[3 * i + j] = 255;
+        }
+    }
+#endif
 #ifdef __APPLE__
     NS::AutoreleasePool* p_pool = NS::AutoreleasePool::alloc()->init();
     MTL::Device* device = MTL::CreateSystemDefaultDevice();
     MetalRenderer* renderer = new MetalRenderer(device);
+    MetalTransformer* transformer = new MetalTransformer(device);
     renderer->init();
+    transformer->init();
 #endif
+
 #ifdef __gnu_linux__
     CudaRenderer* renderer = new CudaRenderer();
 #endif
 
 
-    uint8_t* data_cpu = (uint8_t*)malloc(sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
-    float* vertices_cpu = (float*)malloc(sizeof(float) *  Nv * 3);
-    float* colors_cpu = (float*)malloc(sizeof(float) *  Nv * 3);
-    uint* faces_cpu = (uint*)malloc(sizeof(uint) * Nf * 3);
 #ifdef CUBE
     for (int i = 0; i < Nv; i++) {
         for (int j = 0; j < IMG_DIMS; j++) {
@@ -126,83 +194,42 @@ int main(int argc, char** argv) {
             faces_cpu[IMG_DIMS * i + j] = faces[i][j];
         }
     }
-#else
-    for (int i = 0; i < Nv; i++) {
-        for (int j = 0; j < IMG_DIMS; j++) {
-            vertices_cpu[IMG_DIMS * i + j] = mesh->positions[IMG_DIMS * i + j] * 0.1;
-            colors_cpu[IMG_DIMS * i + j] = 255;
-        }
-    }
-
-    for (int i = 0; i < Nf; i++) {
-        for (int j = 0; j < IMG_DIMS; j++) {
-            faces_cpu[IMG_DIMS * i + j] = mesh->face_vertices[IMG_DIMS * i + j];
-        }
-    }
 #endif
-    float theta_x = 0.0f;
-    float theta_z = 0.0f;
-<<<<<<< HEAD
-=======
+
+    float cx, cy, fx, fy;
+
+    cx = 1024 / 2;
+    cy = 1024 / 2;
+    fx = 1024;
+    fy = 1024;
+        
+    float theta = 0.0f;
     while (true) {
->>>>>>> f6f0891 (Got it working on METAL)
-        float rotation_z[3][3] = {
-            {cos(theta_z), -sin(theta_z), 0},
-            {sin(theta_z), cos(theta_z), 0},
-            {0, 0, 1}
-        };
+        theta += 0.03f;
+        float* vertices_rotated = (float*)malloc(sizeof(float) * Nv * 3);
+        float* vertices_projected = (float*)malloc(sizeof(float) * Nv * 3);
+        float* zbuffer_cpu = (float*)malloc(sizeof(float) * IMG_ROWS * IMG_COLS);
+        float* q = (float*)malloc(sizeof(float) * 4);
+        q[0] = cos(theta / 2);
+        q[1] = sin(theta / 2) / sqrt(2);
+        q[2] = sin(theta / 2) / sqrt(2);
+        q[3] = 0;
+        transformer->rotate(vertices_rotated, vertices_cpu, q, Nv);
+        projection(cx, cy, fx, fy, vertices_projected, vertices_rotated, Nv);
+        memset(data_cpu, 0, sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
 
-        float rotation_x[3][3] = {
-            {1, 0, 0},
-            {0, cos(theta_x), -sin(theta_x)},
-            {0, sin(theta_x), cos(theta_x)}
-        };
-        theta_x += 0.05;
-        theta_z += 0.02;
-        float* vertices_copy = (float*)malloc(sizeof(float) * Nv * 3);
-        for (int nv = 0; nv < Nv; nv++) {
-            for (int i = 0; i < 3; i++) {
-                vertices_copy[nv * 3 + i] = 0.0;
-                for (int j = 0; j < 3; j++) {
-                    vertices_copy[nv * 3 + i] += rotation_z[i][j] * vertices_cpu[nv * 3 + j];
-                }
-            }
+        for (int i = 0; i < IMG_ROWS * IMG_COLS; i++) {
+            zbuffer_cpu[i] = 10000.0;
         }
+        renderer->render_vertices(data_cpu, zbuffer_cpu, vertices_projected, colors_cpu, faces_cpu, Nv, Nf);
         
-        float* vertices_copy1 = (float*)malloc(sizeof(float) * Nv * 3);
-        for (int nv = 0; nv < Nv; nv++) {
-            for (int i = 0; i < 3; i++) {
-                vertices_copy1[nv * 3 + i] = 0.0;
-                for (int j = 0; j < 3; j++) {
-                    vertices_copy1[nv * 3 + i] += rotation_x[i][j] * vertices_copy[nv * 3 + j];
-                }
-            }
-        }
-        float* vertices_copy2 = (float*)malloc(sizeof(float) * Nv * 3);
-
-        float cx, cy, fx, fy;
-
-        cx = 1024 / 2;
-        cy = 1024 / 2;
-        fx = 1024;
-        fy = 1024;
-        
-        projection(cx, cy, fx, fy, vertices_copy2, vertices_copy1, Nv);
-
-        renderer->render_vertices(data_cpu, vertices_copy2, colors_cpu, faces_cpu, Nv, Nf);
-        
-        cv::Mat img(cv::Size(IMG_COLS, IMG_ROWS), CV_8UC3);
-        for (size_t i = 0; i < IMG_ROWS; i++) {
-            for (size_t j = 0; j < IMG_COLS; j++) {
-                img.at<cv::Vec<uint8_t, 3>>(i, j) = cv::Vec<uint8_t, 3>(data_cpu[3 * IMG_COLS * i + 3 * j], data_cpu[3 * IMG_COLS * i + 3 * j + 1], data_cpu[3 * IMG_COLS * i + 3 * j + 2]);
-            }
-        }
+        cv::Mat img(cv::Size(IMG_COLS, IMG_ROWS), CV_8UC3, data_cpu);
 
         cv::imshow("render", img);
         cv::waitKey(1);
-        free(vertices_copy);
-        free(vertices_copy1);
-        free(vertices_copy2);
+        free(vertices_projected);
+        free(vertices_rotated);
+        free(zbuffer_cpu);
     }
 
     free(data_cpu);
