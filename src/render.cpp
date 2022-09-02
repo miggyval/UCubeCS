@@ -18,65 +18,8 @@
 
 
 #ifdef __APPLE__
+
 MetalRenderer::MetalRenderer(MTL::Device* device) : _device(device) {}
-
-void MetalRenderer::render_vertices(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
-
-    MTL::Buffer* data_gpu;
-    MTL::Buffer* zbuffer_gpu;
-    MTL::Buffer* vertices_gpu;
-    MTL::Buffer* colors_gpu;
-    MTL::Buffer* faces_gpu;
-    MTL::Buffer* Nf_gpu;
-    MTL::Buffer* Nv_gpu;
-    
-    data_gpu = _device->newBuffer(sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS, MTL::ResourceStorageModeShared);
-    zbuffer_gpu = _device->newBuffer(sizeof(float) * IMG_ROWS * IMG_COLS, MTL::ResourceStorageModeShared);
-    vertices_gpu = _device->newBuffer(sizeof(float) * Nv * 3, MTL::ResourceStorageModeShared);
-    colors_gpu = _device->newBuffer(sizeof(float) *  Nv * 3, MTL::ResourceStorageModeShared);
-    faces_gpu = _device->newBuffer(sizeof(uint) * Nf * 3, MTL::ResourceStorageModeShared);
-    Nf_gpu = _device->newBuffer(sizeof(uint), MTL::ResourceStorageModeShared);
-    Nv_gpu = _device->newBuffer(sizeof(uint), MTL::ResourceStorageModeShared);
-    
-
-    memcpy( data_gpu->contents(), data, sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
-    memcpy( zbuffer_gpu->contents(), zbuffer, sizeof(float) * IMG_ROWS * IMG_COLS);
-    memcpy( vertices_gpu->contents(), vertices, sizeof(float) * Nv * 3);
-    memcpy( colors_gpu->contents(), colors, sizeof(float) * Nv * 3);
-    memcpy( faces_gpu->contents(), faces, sizeof(uint) * Nf * 3);
-    memcpy( Nf_gpu->contents(), &Nf, sizeof(uint));
-    memcpy( Nv_gpu->contents(), &Nv, sizeof(uint));
-
-    MTL::CommandBuffer* command_buffer = _CommandQueue->commandBuffer();
-    
-    MTL::ComputeCommandEncoder* compute_encoder = command_buffer->computeCommandEncoder();
-    
-    
-    compute_encoder->setComputePipelineState(_addFunctionPSO);
-    compute_encoder->setBuffer(data_gpu, 0, 0);
-    compute_encoder->setBuffer(zbuffer_gpu, 0, 1);
-    compute_encoder->setBuffer(vertices_gpu, 0, 2);
-    compute_encoder->setBuffer(colors_gpu, 0, 3);
-    compute_encoder->setBuffer(faces_gpu, 0, 4);
-    compute_encoder->setBuffer(Nf_gpu, 0, 5);
-    compute_encoder->setBuffer(Nv_gpu, 0, 6);
-    
-    MTL::Size grid_size = MTL::Size(IMG_ROWS * IMG_COLS, 1, 1);
-    
-    NS::UInteger _thread_group_size = _addFunctionPSO->maxTotalThreadsPerThreadgroup();
-    if(_thread_group_size > IMG_ROWS * IMG_COLS){
-        _thread_group_size = IMG_ROWS * IMG_COLS;
-    }
-    
-    MTL::Size thread_group_size = MTL::Size(_thread_group_size, 1, 1);
-    
-    compute_encoder->dispatchThreads(grid_size, thread_group_size);
-    compute_encoder->endEncoding();
-    command_buffer->commit();
-    command_buffer->waitUntilCompleted();
-    memcpy( data, data_gpu->contents(), sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
-}
-
 
 int MetalRenderer::init() {
     
@@ -99,9 +42,72 @@ int MetalRenderer::init() {
 
     _addFunctionPSO = _device->newComputePipelineState(mtl_function, &error);
     _CommandQueue   = _device->newCommandQueue();
+
     return 1;
     
 }
+
+void MetalRenderer::render_vertices(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
+
+    MTL::Buffer* data_gpu;
+    MTL::Buffer* zbuffer_gpu;
+    MTL::Buffer* vertices_gpu;
+    MTL::Buffer* colors_gpu;
+    MTL::Buffer* faces_gpu;
+    MTL::Buffer* Nf_gpu;
+    MTL::Buffer* Nv_gpu;
+    
+    data_gpu        = _device->newBuffer(sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS, MTL::ResourceStorageModeShared);
+    zbuffer_gpu     = _device->newBuffer(sizeof(float) * IMG_ROWS * IMG_COLS, MTL::ResourceStorageModeShared);
+    vertices_gpu    = _device->newBuffer(sizeof(float) * Nv * 3, MTL::ResourceStorageModeShared);
+    colors_gpu      = _device->newBuffer(sizeof(float) *  Nv * 3, MTL::ResourceStorageModeShared);
+    faces_gpu       = _device->newBuffer(sizeof(uint) * Nf * 3, MTL::ResourceStorageModeShared);
+    Nf_gpu          = _device->newBuffer(sizeof(uint), MTL::ResourceStorageModeShared);
+    Nv_gpu          = _device->newBuffer(sizeof(uint), MTL::ResourceStorageModeShared);
+    
+    memcpy( data_gpu->contents(), data, sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
+    memcpy( zbuffer_gpu->contents(), zbuffer, sizeof(float) * IMG_ROWS * IMG_COLS);
+    memcpy( vertices_gpu->contents(), vertices, sizeof(float) * Nv * 3);
+    memcpy( colors_gpu->contents(), colors, sizeof(float) * Nv * 3);
+    memcpy( faces_gpu->contents(), faces, sizeof(uint) * Nf * 3);
+    memcpy( Nf_gpu->contents(), &Nf, sizeof(uint));
+    memcpy( Nv_gpu->contents(), &Nv, sizeof(uint));
+
+    command_buffer = _CommandQueue->commandBuffer();
+    compute_encoder = command_buffer->computeCommandEncoder();
+
+    compute_encoder->setComputePipelineState(_addFunctionPSO);
+    
+    compute_encoder->setBuffer(data_gpu, 0, 0);
+    compute_encoder->setBuffer(zbuffer_gpu, 0, 1);
+    compute_encoder->setBuffer(vertices_gpu, 0, 2);
+    compute_encoder->setBuffer(colors_gpu, 0, 3);
+    compute_encoder->setBuffer(faces_gpu, 0, 4);
+    compute_encoder->setBuffer(Nf_gpu, 0, 5);
+    compute_encoder->setBuffer(Nv_gpu, 0, 6);
+    
+    MTL::Size grid_size = MTL::Size(Nf, IMG_ROWS * IMG_COLS, 1);
+    
+    NS::UInteger _thread_group_size = _addFunctionPSO->maxTotalThreadsPerThreadgroup();
+    if(_thread_group_size > IMG_ROWS * IMG_COLS * Nf){
+        _thread_group_size = IMG_ROWS * IMG_COLS * Nf;
+    }
+    MTL::Size thread_group_size = MTL::Size(_thread_group_size, 1, 1);
+    compute_encoder->dispatchThreads(grid_size, thread_group_size);
+    compute_encoder->endEncoding();
+    command_buffer->commit();
+    command_buffer->waitUntilCompleted();
+    memcpy( data, data_gpu->contents(), sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
+    
+    data_gpu->release();
+    zbuffer_gpu->release();
+    vertices_gpu->release();
+    colors_gpu->release();
+    faces_gpu->release();
+    Nf_gpu->release();
+    Nv_gpu->release();
+}
+
 #endif
 
 #ifdef __gnu_linux__
@@ -147,6 +153,7 @@ void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors
     err = cudaFree(vertices_gpu);
     err = cudaFree(colors_gpu);
     err = cudaFree(faces_gpu);
+
     free(zbuffer);
 
     err = cudaGetLastError();

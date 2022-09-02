@@ -21,6 +21,8 @@ private:
     MTL::Device* _device;
     MTL::CommandQueue* _CommandQueue;
     MTL::ComputePipelineState* _addFunctionPSO;
+    MTL::CommandBuffer* command_buffer;
+    MTL::ComputeCommandEncoder* compute_encoder;
     
 };
 #endif

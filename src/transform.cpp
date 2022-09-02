@@ -34,7 +34,7 @@ void MetalTransformer::rotate(float* dst, float* src, float* q, uint N) {
     MTL::Buffer* src_gpu;
     MTL::Buffer* q_gpu;
     MTL::Buffer* N_gpu;
-    
+    MTL::Buffer* test;
     dst_gpu = _device->newBuffer(sizeof(float) * N * 3, MTL::ResourceStorageModeShared);
     src_gpu = _device->newBuffer(sizeof(float) * N * 3, MTL::ResourceStorageModeShared);
     q_gpu = _device->newBuffer(sizeof(float) * 4, MTL::ResourceStorageModeShared);
@@ -67,8 +67,13 @@ void MetalTransformer::rotate(float* dst, float* src, float* q, uint N) {
     compute_encoder->endEncoding();
     command_buffer->commit();
     command_buffer->waitUntilCompleted();
-    memcpy(dst, dst_gpu->contents(), sizeof(float) * N * 3);
+
     
+    memcpy(dst, dst_gpu->contents(), sizeof(float) * N * 3);
+    dst_gpu->release();
+    src_gpu->release();
+    q_gpu->release();
+    N_gpu->release();
 }
 
 
@@ -111,10 +116,6 @@ void CudaTransformer::rotate(float* dst, float* src, float* q, uint N) {
     float* q_gpu;
 
     cudaError_t err = cudaSuccess;
-    float* zbuffer = (float*)malloc(sizeof(float) * IMG_ROWS * IMG_COLS);
-    for (int i = 0; i < IMG_ROWS * IMG_COLS; i++) {
-        zbuffer[i] = 10000.0;
-    }
 
     err = cudaMalloc((void**)&dst_gpu, sizeof(float) * N * 3);
     err = cudaMalloc((void**)&src_gpu, sizeof(float) * N * 3);
