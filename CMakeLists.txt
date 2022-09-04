@@ -35,10 +35,6 @@ elseif(UNIX)
     find_package( freenect2 REQUIRED )
     find_package( OpenCV REQUIRED )
     find_package( CUDA REQUIRED )
-    find_package( OpenPose REQUIRED )
-    find_package( gflags REQUIRED )
-    find_package( PCL REQUIRED )
-    find_package( catkin REQUIRED COMPONENTS pcl_conversions )
 endif()
 
 include_directories(
