@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
 
 #ifdef __gnu_linux__
     CudaRenderer* renderer = new CudaRenderer();
-    MetalTransformer* transformer = new CudaRenderer();
+    CudaTransformer* transformer = new CudaTransformer();
 #endif
 
     uint8_t* data_cpu = (uint8_t*)malloc(sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
@@ -255,7 +255,7 @@ std::string inputfile = "../src/teapot.obj";
     w[2] = 0;
 
     float hue_off = 0.0f;
-    NS::AutoreleasePool* p_pool = NS::AutoreleasePool::alloc()->init();
+
     while (true) {
         hue_off += 1.0;
 
@@ -339,7 +339,6 @@ std::string inputfile = "../src/teapot.obj";
     free(vertices_cpu);
     free(colors_cpu);
     free(faces_cpu);
-    p_pool->release();
 
     delete transformer;
     delete renderer;

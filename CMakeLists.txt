@@ -86,8 +86,14 @@ if (APPLE)
 elseif(UNIX)
     add_library(render_cuda src/render.cu)
     add_library(render src/render.cpp)
-    add_executable(main src/main.cpp)
-    target_link_libraries( render ${OpenCV_LIBS} ${CUDART_LIBRARY} ${PCL_LIBRARIES} ${freenect2_LIBRARIES} render_cuda fast_obj_lib )
-    target_link_libraries( transform ${OpenCV_LIBS} ${CUDART_LIBRARY} ${PCL_LIBRARIES} ${freenect2_LIBRARIES} render_cuda fast_obj_lib )
 
+    add_library(transform_cuda src/transform.cu)
+    add_library(transform src/transform.cpp)
+
+    add_executable(main src/main.cpp)
+
+    target_link_libraries( render ${OpenCV_LIBS} ${CUDART_LIBRARY} ${PCL_LIBRARIES} ${freenect2_LIBRARIES} render_cuda tinyobjloader )
+    target_link_libraries( transform ${OpenCV_LIBS} ${CUDART_LIBRARY} ${PCL_LIBRARIES} ${freenect2_LIBRARIES} transform_cuda tinyobjloader )
+
+    target_link_libraries(main render transform)
 endif()

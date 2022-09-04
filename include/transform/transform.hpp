@@ -25,13 +25,13 @@ private:
 #endif
 
 #ifdef __gnu_linux__
-class CudaRenderer{
+class CudaTransformer{
 public:
-    CudaRenderer();
-    void render_vertices(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf);
+    CudaTransformer();
+    void rotate(float* dst, float* src, float* q, uint N);
 };
 
-void render_helper(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf);
+void rotate_helper(float* dst, float* src, float* q, uint N);
 
 #endif
 

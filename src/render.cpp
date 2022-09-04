@@ -116,7 +116,7 @@ CudaRenderer::CudaRenderer() {
     
 }
 
-void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
+void CudaRenderer::render_vertices(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
    
     /* Create Buffers */
     uint8_t* data_gpu;
@@ -126,7 +126,6 @@ void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors
     uint* faces_gpu;
 
     cudaError_t err = cudaSuccess;
-    float* zbuffer = (float*)malloc(sizeof(float) * IMG_ROWS * IMG_COLS);
     for (int i = 0; i < IMG_ROWS * IMG_COLS; i++) {
         zbuffer[i] = 10000.0;
     }
@@ -153,8 +152,6 @@ void CudaRenderer::render_vertices(uint8_t* data, float* vertices, float* colors
     err = cudaFree(vertices_gpu);
     err = cudaFree(colors_gpu);
     err = cudaFree(faces_gpu);
-
-    free(zbuffer);
 
     err = cudaGetLastError();
     
