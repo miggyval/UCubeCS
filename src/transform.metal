@@ -31,5 +31,8 @@ kernel void rotate(device float* dst, device const float* src, device const floa
 }
 
 kernel void translate(device float* dst, device const float* src, device const float* p, device const float* N, uint index [[thread_position_in_grid]]) {
- 
+    int n = index;
+    for (int i = 0; i < 3; i++) {
+        dst[3 * n + i] = src[3 * n + i] + p[i];
+    }
 }

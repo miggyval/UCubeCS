@@ -40,14 +40,14 @@ int MetalRenderer::init() {
         std::exit(-1);
     }
 
-    _addFunctionPSO = _device->newComputePipelineState(mtl_function, &error);
+    _renderFunctionPSO = _device->newComputePipelineState(mtl_function, &error);
     _CommandQueue   = _device->newCommandQueue();
 
     return 1;
     
 }
 
-void MetalRenderer::render_vertices(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
+void MetalRenderer::render(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
 
     MTL::Buffer* data_gpu;
     MTL::Buffer* zbuffer_gpu;
@@ -76,7 +76,7 @@ void MetalRenderer::render_vertices(uint8_t* data, float* zbuffer, float* vertic
     command_buffer = _CommandQueue->commandBuffer();
     compute_encoder = command_buffer->computeCommandEncoder();
 
-    compute_encoder->setComputePipelineState(_addFunctionPSO);
+    compute_encoder->setComputePipelineState(_renderFunctionPSO);
     
     compute_encoder->setBuffer(data_gpu, 0, 0);
     compute_encoder->setBuffer(zbuffer_gpu, 0, 1);
@@ -88,7 +88,7 @@ void MetalRenderer::render_vertices(uint8_t* data, float* zbuffer, float* vertic
     
     MTL::Size grid_size = MTL::Size(Nf, IMG_ROWS * IMG_COLS, 1);
     
-    NS::UInteger _thread_group_size = _addFunctionPSO->maxTotalThreadsPerThreadgroup();
+    NS::UInteger _thread_group_size = _renderFunctionPSO->maxTotalThreadsPerThreadgroup();
     if(_thread_group_size > IMG_ROWS * IMG_COLS * Nf){
         _thread_group_size = IMG_ROWS * IMG_COLS * Nf;
     }

@@ -28,6 +28,52 @@
 
 MetalTransformer::MetalTransformer(MTL::Device* device) : _device(device) {}
 
+void MetalTransformer::translate(float* dst, float* src, float* p, uint N) {
+    MTL::Buffer* dst_gpu;
+    MTL::Buffer* src_gpu;
+    MTL::Buffer* p_gpu;
+    MTL::Buffer* N_gpu;
+    MTL::Buffer* test;
+    dst_gpu = _device->newBuffer(sizeof(float) * N * 3, MTL::ResourceStorageModeShared);
+    src_gpu = _device->newBuffer(sizeof(float) * N * 3, MTL::ResourceStorageModeShared);
+    p_gpu = _device->newBuffer(sizeof(float) * 3, MTL::ResourceStorageModeShared);
+    N_gpu = _device->newBuffer(sizeof(uint), MTL::ResourceStorageModeShared);
+    
+    memcpy(src_gpu->contents(), src, sizeof(float) * N * 3);
+    memcpy(p_gpu->contents(), p, sizeof(float) * 3);
+    memcpy(N_gpu->contents(), &N, sizeof(float));
+
+    MTL::CommandBuffer* command_buffer = _CommandQueue->commandBuffer();
+    
+    MTL::ComputeCommandEncoder* compute_encoder = command_buffer->computeCommandEncoder();
+    
+    compute_encoder->setComputePipelineState(_translateFunctionPSO);
+    compute_encoder->setBuffer(dst_gpu, 0, 0);
+    compute_encoder->setBuffer(src_gpu, 0, 1);
+    compute_encoder->setBuffer(p_gpu, 0, 2);
+    compute_encoder->setBuffer(N_gpu, 0, 3);
+    
+    MTL::Size grid_size = MTL::Size(N, 1, 1);
+    
+    NS::UInteger _thread_group_size = _translateFunctionPSO->maxTotalThreadsPerThreadgroup();
+    if(_thread_group_size > N){
+        _thread_group_size = N;
+    }
+    
+    MTL::Size thread_group_size = MTL::Size(_thread_group_size, 1, 1);
+    
+    compute_encoder->dispatchThreads(grid_size, thread_group_size);
+    compute_encoder->endEncoding();
+    command_buffer->commit();
+    command_buffer->waitUntilCompleted();
+
+    memcpy(dst, dst_gpu->contents(), sizeof(float) * N * 3);
+    dst_gpu->release();
+    src_gpu->release();
+    p_gpu->release();
+    N_gpu->release();
+}
+
 void MetalTransformer::rotate(float* dst, float* src, float* q, uint N) {
 
     MTL::Buffer* dst_gpu;
@@ -48,7 +94,7 @@ void MetalTransformer::rotate(float* dst, float* src, float* q, uint N) {
     
     MTL::ComputeCommandEncoder* compute_encoder = command_buffer->computeCommandEncoder();
     
-    compute_encoder->setComputePipelineState(_addFunctionPSO);
+    compute_encoder->setComputePipelineState(_rotateFunctionPSO);
     compute_encoder->setBuffer(dst_gpu, 0, 0);
     compute_encoder->setBuffer(src_gpu, 0, 1);
     compute_encoder->setBuffer(q_gpu, 0, 2);
@@ -56,7 +102,7 @@ void MetalTransformer::rotate(float* dst, float* src, float* q, uint N) {
     
     MTL::Size grid_size = MTL::Size(N, 1, 1);
     
-    NS::UInteger _thread_group_size = _addFunctionPSO->maxTotalThreadsPerThreadgroup();
+    NS::UInteger _thread_group_size = _rotateFunctionPSO->maxTotalThreadsPerThreadgroup();
     if(_thread_group_size > N){
         _thread_group_size = N;
     }
@@ -68,8 +114,8 @@ void MetalTransformer::rotate(float* dst, float* src, float* q, uint N) {
     command_buffer->commit();
     command_buffer->waitUntilCompleted();
 
-    
     memcpy(dst, dst_gpu->contents(), sizeof(float) * N * 3);
+    
     dst_gpu->release();
     src_gpu->release();
     q_gpu->release();
@@ -89,14 +135,25 @@ int MetalTransformer::init() {
         std::exit(-1);
     }
     
-    auto function = NS::String::string("rotate", NS::ASCIIStringEncoding);
-    auto mtl_function = lib->newFunction(function);
-    if (!mtl_function){
+    auto rotate_function = NS::String::string("rotate", NS::ASCIIStringEncoding);
+    auto mtl_rotate_function = lib->newFunction(rotate_function);
+    if (!mtl_rotate_function){
         std::cerr << "failed to load kernel\n";
         std::exit(-1);
     }
 
-    _addFunctionPSO = _device->newComputePipelineState(mtl_function, &error);
+    _rotateFunctionPSO = _device->newComputePipelineState(mtl_rotate_function, &error);
+
+
+    auto translate_function = NS::String::string("translate", NS::ASCIIStringEncoding);
+    auto mtl_translate_function = lib->newFunction(translate_function);
+    if (!mtl_translate_function){
+        std::cerr << "failed to load kernel\n";
+        std::exit(-1);
+    }
+
+    _translateFunctionPSO = _device->newComputePipelineState(mtl_translate_function, &error);
+
     _CommandQueue   = _device->newCommandQueue();
     return 1;
     

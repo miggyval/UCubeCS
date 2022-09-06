@@ -1,5 +1,8 @@
 #include <iostream>
 #include <cstdint>
+#include <fstream>
+#include <string>
+#include <cmath>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
@@ -8,8 +11,6 @@
 #include <opencv2/core/cuda.inl.hpp>
 #include <opencv2/core/cuda_types.hpp>
 #include <opencv2/core/cuda_types.hpp>
-
-#include <cstdint>
 
 #ifdef __APPLE__
 #include <Foundation/Foundation.hpp>
@@ -20,9 +21,6 @@
 #include <render/render.hpp>
 #include <transform/transform.hpp>
 
-#include <iostream>
-#include <fstream>
-#include <string>
 #include <libfreenect2/libfreenect2.hpp>
 #include <libfreenect2/frame_listener_impl.h>
 #include <libfreenect2/registration.h>
@@ -36,6 +34,7 @@
 #include <thread>
 #include <sys/types.h>
 #include <sys/stat.h>
+
 
 
 bool pressed = false;
@@ -52,10 +51,6 @@ void mouse_cb(int event, int x, int y, int flags, void* userdata) {
     if (event == cv::EVENT_MOUSEMOVE) {
         curr_x = x;
         curr_y = y;
-        delta_x = (float)(curr_x - prev_x) / (float)IMG_COLS;
-        delta_y = (float)(curr_y - prev_y) / (float)IMG_ROWS;
-        prev_x = curr_x;
-        prev_y = curr_y;
     }
 }
 
@@ -79,6 +74,7 @@ void quat_prod(float* u, float* v, float* r) {
 }
 
 void projection(float cx, float cy, float fx, float fy, float* vp_arr, float* v_arr, int numPoints);
+
 void projection(float cx, float cy, float fx, float fy, float* vp_arr, float* v_arr, int numPoints) {
     for (int i = 0; i < numPoints; i++) {
         vp_arr[3 * i]       = fx * v_arr[3 * i + 0] + cx;
@@ -181,7 +177,7 @@ int main(int argc, char** argv) {
         }
     }
 #else
-std::string inputfile = "../src/teapot.obj";
+    std::string inputfile = "../src/teapot.obj";
     tinyobj::ObjReaderConfig reader_config;
     reader_config.mtl_search_path = "./"; // Path to material files
 
@@ -240,12 +236,20 @@ std::string inputfile = "../src/teapot.obj";
     
 
     float* q = (float*)malloc(sizeof(float) * 4);
+    float* p = (float*)malloc(sizeof(float) * 4);
     float* w = (float*)malloc(sizeof(float) * 3);
 
     q[0] = 1;
     q[1] = 0;
     q[2] = 0;
     q[3] = 0;
+
+    float theta = 0.0f;
+
+    p[0] = 0.0;
+    p[1] = 0.0;
+    p[2] = 0.0;
+
     bool rot_toggle = false;
     cv::namedWindow("render", cv::WINDOW_NORMAL);
     cv::setMouseCallback("render", mouse_cb, NULL);
@@ -253,10 +257,20 @@ std::string inputfile = "../src/teapot.obj";
     w[0] = 0;
     w[1] = 0;
     w[2] = 0;
-
     float hue_off = 0.0f;
 
     while (true) {
+
+        p[0] = 0.1f * cos(theta);
+        p[1] = 0.1f * sin(theta);
+        p[2] = 0.0f;
+        theta += 0.01 * M_PI;
+
+        delta_x = (float)(curr_x - prev_x) / (float)IMG_COLS;
+        delta_y = (float)(curr_y - prev_y) / (float)IMG_ROWS;
+        prev_x = curr_x;
+        prev_y = curr_y;
+
         hue_off += 1.0;
 
         for (int i = 0; i < Nv; i++) {
@@ -274,6 +288,7 @@ std::string inputfile = "../src/teapot.obj";
         }
 
         float* vertices_rotated = (float*)malloc(sizeof(float) * Nv * 3);
+        float* vertices_translated = (float*)malloc(sizeof(float) * Nv * 3);
         float* vertices_projected = (float*)malloc(sizeof(float) * Nv * 3);
         float* zbuffer_cpu = (float*)malloc(sizeof(float) * IMG_ROWS * IMG_COLS);
         float* r = (float*)malloc(sizeof(float) * 4);
@@ -281,7 +296,7 @@ std::string inputfile = "../src/teapot.obj";
         float axis_norm = sqrt(delta_x * delta_x + delta_y * delta_y);
         float axis_y = 0;
         float axis_x = 0;
-        float factor = 2.0;
+        float factor = 1.0;
         float thresh = 10.0;
         if (axis_norm >= 1e-5) {
             if (abs(delta_x) > thresh) {
@@ -298,9 +313,9 @@ std::string inputfile = "../src/teapot.obj";
         }
         
 
-        w[0] *= 0.55;
-        w[1] *= 0.55;
-        w[2] *= 0.55;
+        w[0] *= 0.85;
+        w[1] *= 0.85;
+        w[2] *= 0.85;
 
         float dtheta = sqrt(w[0] * w[0] + w[1] * w[1] + w[2] * w[2]);
         r[0] = 1;
@@ -314,26 +329,31 @@ std::string inputfile = "../src/teapot.obj";
             r[3] = w[2] * sin(dtheta / 2) / dtheta;
         }
         quat_prod(r, q, q);
+
         transformer->rotate(vertices_rotated, vertices_cpu, q, Nv);
-        projection(cx, cy, fx, fy, vertices_projected, vertices_rotated, Nv);
+        transformer->translate(vertices_translated, vertices_rotated, p, Nv);
+
+        projection(cx, cy, fx, fy, vertices_projected, vertices_translated, Nv);
         memset(data_cpu, 0, sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
 
         for (int i = 0; i < IMG_ROWS * IMG_COLS; i++) {
             zbuffer_cpu[i] = 10000.0;
         }
-        renderer->render_vertices(data_cpu, zbuffer_cpu, vertices_projected, colors_cpu, faces_cpu, Nv, Nf);
+
+        renderer->render(data_cpu, zbuffer_cpu, vertices_projected, colors_cpu, faces_cpu, Nv, Nf);
        
-        
         cv::Mat img(cv::Size(IMG_COLS, IMG_ROWS), CV_8UC3, data_cpu);
         cv::imshow("render", img);
         
         char c = cv::waitKey(1);
         free(vertices_projected);
         free(vertices_rotated);
+        free(vertices_translated);
         free(zbuffer_cpu);
         free(r);
     }
     free(q);
+    free(p);
     free(w);
     free(data_cpu);
     free(vertices_cpu);

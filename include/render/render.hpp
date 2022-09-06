@@ -12,7 +12,7 @@ void projection(float cx, float cy, float fx, float fy, float* vp_arr, float* v_
 class MetalRenderer{
 public:
     
-    void render_vertices(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf);
+    void render(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf);
     MetalRenderer(MTL::Device* device);
     int init();
        
@@ -20,7 +20,7 @@ private:
 
     MTL::Device* _device;
     MTL::CommandQueue* _CommandQueue;
-    MTL::ComputePipelineState* _addFunctionPSO;
+    MTL::ComputePipelineState* _renderFunctionPSO;
     MTL::CommandBuffer* command_buffer;
     MTL::ComputeCommandEncoder* compute_encoder;
     

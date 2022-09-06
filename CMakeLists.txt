@@ -2,8 +2,8 @@ cmake_minimum_required( VERSION 3.10 )
 
 project( render_test )
 
-add_definitions(-DIMG_ROWS=512)
-add_definitions(-DIMG_COLS=512)
+add_definitions(-DIMG_ROWS=1024)
+add_definitions(-DIMG_COLS=1024)
 add_definitions(-DIMG_CHNS=3)
 add_definitions(-DIMG_DIMS=3)
 
@@ -58,6 +58,7 @@ if (APPLE)
     add_library( render src/render.cpp )
     add_library( transform src/transform.cpp )
     add_executable( main src/main.cpp )
+    add_executable( calibrate src/calibrate.cpp )
 
     add_custom_command(
         TARGET render
@@ -74,9 +75,11 @@ if (APPLE)
     target_link_libraries( render ${OpenCV_LIBS} ${freenect2_LIBRARIES} kinect_streamer_lib "-framework Metal" "-framework Foundation" "-framework QuartzCore")
     target_link_libraries( transform ${OpenCV_LIBS} ${freenect2_LIBRARIES} kinect_streamer_lib "-framework Metal" "-framework Foundation" "-framework QuartzCore")
     target_link_libraries( main render transform tinyobjloader kinect_streamer_lib)
+    target_link_libraries( calibrate ${OpenCV_LIBS} kinect_streamer_lib ${freenect2_LIBRARIES})
     set_target_properties( render PROPERTIES CXX_STANDARD 17 )
     set_target_properties( transform PROPERTIES CXX_STANDARD 17 )
     set_target_properties( main PROPERTIES CXX_STANDARD 17 )
+    set_target_properties( calibrate PROPERTIES CXX_STANDARD 17 )
     
 
 elseif(UNIX)
@@ -87,9 +90,11 @@ elseif(UNIX)
     add_library(transform src/transform.cpp)
 
     add_executable(main src/main.cpp)
+    add_executable(calibrate src/calibrate.cpp)
 
     target_link_libraries( render ${OpenCV_LIBS} ${CUDART_LIBRARY} ${PCL_LIBRARIES} ${freenect2_LIBRARIES} render_cuda tinyobjloader )
     target_link_libraries( transform ${OpenCV_LIBS} ${CUDART_LIBRARY} ${PCL_LIBRARIES} ${freenect2_LIBRARIES} transform_cuda tinyobjloader )
 
     target_link_libraries(main render transform)
+    target_link_libraries(calibrate ${OpenCV_LIBS} kinect_streamer_lib)
 endif()

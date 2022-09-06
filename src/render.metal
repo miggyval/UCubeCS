@@ -1,7 +1,7 @@
 #include <metal_stdlib>
 
-#define IMG_ROWS    512
-#define IMG_COLS    512
+#define IMG_ROWS    1024
+#define IMG_COLS    1024
 #define IMG_CHNS    3
 #define IMG_DIMS    3
 
