@@ -87,14 +87,13 @@ int main(int argc, char** argv) {
 
     cv::namedWindow("render", cv::WINDOW_NORMAL);
     cv::resizeWindow("render", cv::Size(IMG_COLS, IMG_ROWS));
-    
     uint8_t data[IMG_ROWS][IMG_COLS][IMG_CHNS] = {0};
 
 
 
 
 #ifdef CUBE
-    float size = 0.15;
+    float size = 0.1;
 
     uint Nv = 8;
     uint Nf = 12;
@@ -233,7 +232,11 @@ int main(int argc, char** argv) {
     cy = IMG_ROWS / 2;
     fx = IMG_COLS;
     fy = IMG_ROWS;
-    
+
+    cx = 954.4373691543392;
+    cy = 539.0573704673541;
+    fx = 1052.076000176921;
+    fy = 1053.328054118601;
 
     float* q = (float*)malloc(sizeof(float) * 4);
     float* p = (float*)malloc(sizeof(float) * 4);
@@ -261,9 +264,9 @@ int main(int argc, char** argv) {
 
     while (true) {
 
-        p[0] = 0.1f * cos(theta);
-        p[1] = 0.1f * sin(theta);
-        p[2] = 0.0f;
+        p[0] = 0.2f * cos(theta);
+        p[1] = 0.2f * sin(2 * theta);
+        p[2] = 0.2f * sin(theta) + 3.0f;
         theta += 0.01 * M_PI;
 
         delta_x = (float)(curr_x - prev_x) / (float)IMG_COLS;
@@ -333,14 +336,15 @@ int main(int argc, char** argv) {
         transformer->rotate(vertices_rotated, vertices_cpu, q, Nv);
         transformer->translate(vertices_translated, vertices_rotated, p, Nv);
 
-        projection(cx, cy, fx, fy, vertices_projected, vertices_translated, Nv);
         memset(data_cpu, 0, sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
 
         for (int i = 0; i < IMG_ROWS * IMG_COLS; i++) {
             zbuffer_cpu[i] = 10000.0;
         }
-
-        renderer->render(data_cpu, zbuffer_cpu, vertices_projected, colors_cpu, faces_cpu, Nv, Nf);
+        float params_cpu[4] = {
+            cx, cy, fx, fy
+        };
+        renderer->render(data_cpu, zbuffer_cpu, vertices_translated, colors_cpu, faces_cpu, params_cpu, Nv, Nf);
        
         cv::Mat img(cv::Size(IMG_COLS, IMG_ROWS), CV_8UC3, data_cpu);
         cv::imshow("render", img);

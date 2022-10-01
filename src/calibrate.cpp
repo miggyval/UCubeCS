@@ -67,7 +67,8 @@ int main(int argc, char** argv) {
 
     bool success;
     std::vector<cv::Point2f> corner_pts;
-    while (true) {
+    bool flag = false;
+    while (!flag) {
 
         for (std::string serial : serials) {
             kin_devs[serial]->wait_frames();
@@ -86,6 +87,10 @@ int main(int argc, char** argv) {
             cv::Mat img_depth(cv::Size(depth->width, depth->height), CV_32FC1, depth->data);
             cv::Mat img_ir(cv::Size(ir->width, ir->height), CV_32FC1, ir->data);
 
+            cv::flip(img_color, img_color, 1);
+            cv::flip(img_ir, img_ir, 1);
+            cv::flip(img_depth, img_depth, 1);
+
             cv::Mat img_gray;
             cv::cvtColor(img_color, img_gray, cv::COLOR_BGRA2GRAY);
 
@@ -103,10 +108,29 @@ int main(int argc, char** argv) {
             cv::imshow(serial, img_color);
             kin_devs[serial]->release_frames();
         }
-        cv::waitKey(1);
+        
+        char c = cv::waitKey(1000);
+        if (c == 'q') {
+            flag = true;
+        }
     }
+
     for (std::string serial : serials) {
         kin_devs[serial]->stop();
     }
+    cv::Mat cameraMatrix;
+    cv::Mat distCoeffs;
+    cv::Mat R;
+    cv::Mat T;
+    cv::calibrateCamera(objpoints, imgpoints, cv::Size(1920, 1080), cameraMatrix, distCoeffs, R, T);
+    std::cout << cameraMatrix << std::endl;
+    std::cout << distCoeffs << std::endl;
     return 0;
 }
+
+/*
+[1052.076000176921, 0, 954.4373691543392;
+ 0, 1053.328054118601, 539.0573704673541;
+ 0, 0, 1]
+*/
+/* [0.05602599544362453, -0.06306814040099065, -0.007340280226265216, 0.003083549903768486, 0.01191099593072788] */
