@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
 
 
 #ifdef CUBE
-    float size = 0.5;
+    float size = 1.0;
 
     uint Nv = 8;
     uint Nf = 12;
@@ -264,10 +264,10 @@ int main(int argc, char** argv) {
 
     while (true) {
 
-        p[0] = 0.2f * cos(theta);
-        p[1] = 0.2f * sin(2 * theta);
-        p[2] = 0.2f * sin(theta) + 3.0f;
-        theta += 0.01 * M_PI;
+        p[0] = 2.0f * cos(3 * theta);
+        p[1] = 2.0f * sin(2 * theta);
+        p[2] = 2.0f * sin(theta) + 12.0f;
+        theta += 0.02 * M_PI;
 
         delta_x = (float)(curr_x - prev_x) / (float)IMG_COLS;
         delta_y = (float)(curr_y - prev_y) / (float)IMG_ROWS;
