@@ -5,11 +5,10 @@
 #include <render/render.hpp>
 
 __global__ void render(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, float* params, uint Nv, uint Nf) {
-
     int index = blockDim.x * blockIdx.x + threadIdx.x;
     int nf = index / (IMG_ROWS * IMG_COLS);
     int idx = index % (IMG_ROWS * IMG_COLS);
-      int i = idx / IMG_COLS;
+    int i = idx / IMG_COLS;
     int j = idx % IMG_COLS;
     float Py = IMG_ROWS - i;
     float Px = j;
@@ -32,10 +31,10 @@ __global__ void render(uint8_t* data, float* zbuffer, float* vertices, float* co
 
         float V1x = vertices[IMG_DIMS * idx2 + 0];
         float V1y = vertices[IMG_DIMS * idx2 + 1];
-        //V0x = V0x / V0z;
-        //V0y = V0y / V0z;
-        //V1x = V1x / V1z;
-        //V1y = V1y / V1z;
+        V0x = V0x / V0z;
+        V0y = V0y / V0z;
+        V1x = V1x / V1z;
+        V1y = V1y / V1z;
         V0x = ((V0x * fx) + cx - 0.5);
         V0y = ((V0y * fy) + cy - 0.5);
         V1x = ((V1x * fx) + cx - 0.5);
@@ -53,7 +52,7 @@ __global__ void render(uint8_t* data, float* zbuffer, float* vertices, float* co
 
     float z1 = vertices[3 * idx1 + 2];
     float z2 = vertices[3 * idx2 + 2];
-    float z3 = vertices[3 * idx3 + 1];
+    float z3 = vertices[3 * idx3 + 2];
 
     float x1_raw = vertices[3 * idx1 + 0];
     float y1_raw = vertices[3 * idx1 + 1];
@@ -61,12 +60,12 @@ __global__ void render(uint8_t* data, float* zbuffer, float* vertices, float* co
     float y2_raw = vertices[3 * idx2 + 1];
     float x3_raw = vertices[3 * idx3 + 0];
     float y3_raw = vertices[3 * idx3 + 1];
-    //x1_raw = x1_raw / z1;
-    //y1_raw = y1_raw / z1;
-    //x2_raw = x2_raw / z2;
-    //y2_raw = y2_raw / z2;
-    //x3_raw = x3_raw / z3;
-    //y3_raw = y3_raw / z3;
+    x1_raw = x1_raw / z1;
+    y1_raw = y1_raw / z1;
+    x2_raw = x2_raw / z2;
+    y2_raw = y2_raw / z2;
+    x3_raw = x3_raw / z3;
+    y3_raw = y3_raw / z3;
     float x1 = (((x1_raw) * fx) + cx - 0.5);
     float y1 = (((y1_raw) * fy) + cy - 0.5);
     float x2 = (((x2_raw) * fx) + cx - 0.5);
@@ -122,6 +121,7 @@ __global__ void render(uint8_t* data, float* zbuffer, float* vertices, float* co
         data[3 * idx + 1] = (uint8_t)(255.0 * (l[0] * c1g + l[1] * c2g + l[2] * c3g) / (l[0] + l[1] + l[2]));
         data[3 * idx + 2] = (uint8_t)(255.0 * (l[0] * c1r + l[1] * c2r + l[2] * c3r) / (l[0] + l[1] + l[2]));
     }
+    
 }
 
 
