@@ -116,7 +116,7 @@ CudaRenderer::CudaRenderer() {
     
 }
 
-void CudaRenderer::render_vertices(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
+void CudaRenderer::render(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
    
     /* Create Buffers */
     uint8_t* data_gpu;

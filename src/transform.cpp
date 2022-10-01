@@ -194,4 +194,33 @@ void CudaTransformer::rotate(float* dst, float* src, float* q, uint N) {
     
 }
 
+
+void CudaTransformer::translate(float* dst, float* src, float* p, uint N) {
+   
+    float* dst_gpu;
+    float* src_gpu;
+    float* p_gpu;
+
+    cudaError_t err = cudaSuccess;
+
+    err = cudaMalloc((void**)&dst_gpu, sizeof(float) * N * 3);
+    err = cudaMalloc((void**)&src_gpu, sizeof(float) * N * 3);
+    err = cudaMalloc((void**)&p_gpu, sizeof(float) * 3);
+
+    err = cudaMemcpy(src_gpu, src, sizeof(float) * N * 3, cudaMemcpyHostToDevice);
+    err = cudaMemcpy(p_gpu, p, sizeof(float) * 3, cudaMemcpyHostToDevice);
+
+    translate_helper(dst_gpu, src_gpu, p_gpu, N);
+
+    err = cudaDeviceSynchronize();
+    err = cudaMemcpy(dst, dst_gpu, sizeof(uint8_t) * N * 3, cudaMemcpyDeviceToHost);
+
+    err = cudaFree(dst_gpu);
+    err = cudaFree(src_gpu);
+    err = cudaFree(p_gpu);
+
+    err = cudaGetLastError();
+    
+}
+
 #endif
