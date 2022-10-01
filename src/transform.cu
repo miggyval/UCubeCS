@@ -29,10 +29,25 @@ __global__ void rotate(float* dst, float* src, float* q, uint N) {
 }
 
 
+__global__ void translate(float* dst, float* src, float* p, uint N) {
+    int index = blockDim.x * blockIdx.x + threadIdx.x;
+    int n = index;
+    for (size_t i = 0; i < 3; i++) {
+        dst[3 * n + i] = src[3 * n + i] + p[i];
+    }
+}
 
 void rotate_helper(float* dst, float* src, float* q, uint N) {
     int numElements = N;
     int threadsPerBlock = 1024;
     int blocksPerGrid = (numElements + threadsPerBlock - 1) / threadsPerBlock;
     rotate<<<blocksPerGrid, threadsPerBlock>>>(dst, src, q, N);
+}
+
+
+void translate_helper(float* dst, float* src, float* p, uint N) {
+    int numElements = N;
+    int threadsPerBlock = 1024;
+    int blocksPerGrid = (numElements + threadsPerBlock - 1) / threadsPerBlock;
+    translate<<<blocksPerGrid, threadsPerBlock>>>(dst, src, p, N);
 }

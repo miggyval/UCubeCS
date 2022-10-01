@@ -35,6 +35,7 @@ elseif(UNIX)
     find_package( freenect2 REQUIRED )
     find_package( OpenCV REQUIRED )
     find_package( CUDA REQUIRED )
+    find_package( PCL REQUIRED )
 endif()
 
 include_directories(
@@ -90,11 +91,15 @@ elseif(UNIX)
     add_library(transform src/transform.cpp)
 
     add_executable(main src/main.cpp)
-    add_executable(calibrate src/calibrate.cpp)
+    #add_executable(calibrate src/calibrate.cpp)
 
     target_link_libraries( render ${OpenCV_LIBS} ${CUDART_LIBRARY} ${PCL_LIBRARIES} ${freenect2_LIBRARIES} render_cuda tinyobjloader )
     target_link_libraries( transform ${OpenCV_LIBS} ${CUDART_LIBRARY} ${PCL_LIBRARIES} ${freenect2_LIBRARIES} transform_cuda tinyobjloader )
 
     target_link_libraries(main render transform)
-    target_link_libraries(calibrate ${OpenCV_LIBS} kinect_streamer_lib)
+    #target_link_libraries(calibrate ${OpenCV_LIBS} kinect_streamer_lib)
+    set_target_properties( render PROPERTIES CXX_STANDARD 17 )
+    set_target_properties( transform PROPERTIES CXX_STANDARD 17 )
+    set_target_properties( main PROPERTIES CXX_STANDARD 17 )
+    #set_target_properties( calibrate PROPERTIES CXX_STANDARD 17 )
 endif()

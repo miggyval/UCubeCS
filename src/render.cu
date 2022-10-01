@@ -5,7 +5,7 @@
 #include <render/render.hpp>
 
 __global__ void render(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, uint Nv, uint Nf) {
-    
+
     int index = blockDim.x * blockIdx.x + threadIdx.x;
     if (index > IMG_ROWS * IMG_COLS * Nf);
     int nf = index / (IMG_ROWS * IMG_COLS);
