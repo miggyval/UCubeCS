@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
 
 
 #ifdef CUBE
-    float size = 0.1;
+    float size = 0.5;
 
     uint Nv = 8;
     uint Nf = 12;
