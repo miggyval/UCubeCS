@@ -1,10 +1,5 @@
 #include <metal_stdlib>
 
-#define IMG_ROWS    1024
-#define IMG_COLS    1024
-#define IMG_CHNS    3
-#define IMG_DIMS    3
-
 using namespace metal;
 
 kernel void rotate(device float* dst, device const float* src, device const float* q, device const float* N, uint index [[thread_position_in_grid]]) {

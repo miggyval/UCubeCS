@@ -4,6 +4,7 @@
 #include <cuda_runtime.h>
 #include <render/render.hpp>
 
+
 __global__ void render(uint8_t* data, float* zbuffer, float* vertices, float* colors, uint32_t* faces, float* params, uint Nv, uint Nf) {
     int index = blockDim.x * blockIdx.x + threadIdx.x;
     int nf = index / (IMG_ROWS * IMG_COLS);

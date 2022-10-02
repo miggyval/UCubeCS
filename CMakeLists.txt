@@ -2,8 +2,8 @@ cmake_minimum_required( VERSION 3.10 )
 
 project( render_test )
 
-add_definitions(-DIMG_ROWS=1024)
-add_definitions(-DIMG_COLS=2048)
+add_definitions(-DIMG_ROWS=512)
+add_definitions(-DIMG_COLS=1024)
 add_definitions(-DIMG_CHNS=3)
 add_definitions(-DIMG_DIMS=3)
 

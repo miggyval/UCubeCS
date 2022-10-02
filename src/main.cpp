@@ -230,13 +230,8 @@ int main(int argc, char** argv) {
 
     cx = IMG_COLS / 2;
     cy = IMG_ROWS / 2;
-    fx = IMG_COLS;
-    fy = IMG_ROWS;
-
-    cx = 954.4373691543392;
-    cy = 539.0573704673541;
-    fx = 1052.076000176921;
-    fy = 1053.328054118601;
+    fx = std::min(IMG_ROWS, IMG_COLS);
+    fy = std::min(IMG_ROWS, IMG_COLS);
 
     float* q = (float*)malloc(sizeof(float) * 4);
     float* p = (float*)malloc(sizeof(float) * 4);
@@ -267,7 +262,7 @@ int main(int argc, char** argv) {
         p[0] = 2.0f * cos(3 * theta);
         p[1] = 2.0f * sin(2 * theta);
         p[2] = 2.0f * sin(theta) + 12.0f;
-        theta += 0.02 * M_PI;
+        theta += 0.001 * M_PI;
 
         delta_x = (float)(curr_x - prev_x) / (float)IMG_COLS;
         delta_y = (float)(curr_y - prev_y) / (float)IMG_ROWS;
