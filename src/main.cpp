@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
 
 
 #ifdef CUBE
-    float size = 1.0;
+    float size = 0.5;
 
     uint Nv = 8;
     uint Nf = 12;
@@ -234,7 +234,11 @@ int main(int argc, char** argv) {
     fy = std::min(IMG_ROWS, IMG_COLS);
 
     float* q = (float*)malloc(sizeof(float) * 4);
-    float* p = (float*)malloc(sizeof(float) * 4);
+
+    float* p = (float*)malloc(sizeof(float) * 3);
+    float* pdot = (float*)malloc(sizeof(float) * 3);
+    float* p_d = (float*)malloc(sizeof(float) * 3);
+
     float* w = (float*)malloc(sizeof(float) * 3);
 
     q[0] = 1;
@@ -248,6 +252,14 @@ int main(int argc, char** argv) {
     p[1] = 0.0;
     p[2] = 0.0;
 
+    pdot[0] = 0.0;
+    pdot[1] = 0.0;
+    pdot[2] = 0.0;
+
+    p_d[0] = 0.0;
+    p_d[1] = 0.0;
+    p_d[2] = 0.0;
+
     bool rot_toggle = false;
     cv::namedWindow("render", cv::WINDOW_NORMAL);
     cv::setMouseCallback("render", mouse_cb, NULL);
@@ -259,10 +271,8 @@ int main(int argc, char** argv) {
 
     while (true) {
 
-        p[0] = 2.0f * cos(3 * theta);
-        p[1] = 2.0f * sin(2 * theta);
-        p[2] = 2.0f * sin(theta) + 12.0f;
-        theta += 0.001 * M_PI;
+
+        theta += 0.005 * M_PI;
 
         delta_x = (float)(curr_x - prev_x) / (float)IMG_COLS;
         delta_y = (float)(curr_y - prev_y) / (float)IMG_ROWS;
@@ -304,8 +314,8 @@ int main(int argc, char** argv) {
             if (abs(delta_y) > thresh) {
                 delta_y = delta_y / abs(delta_y) * thresh;
             }
-            axis_x = factor * delta_y;
-            axis_y = factor * delta_x;
+            axis_x = -factor * delta_y;
+            axis_y = -factor * delta_x;
             w[0] += axis_x;
             w[1] += axis_y;
         }
@@ -343,16 +353,61 @@ int main(int argc, char** argv) {
        
         cv::Mat img(cv::Size(IMG_COLS, IMG_ROWS), CV_8UC3, data_cpu);
         cv::imshow("render", img);
-        
+
+        float m = 1.0;
+        float* pddot = (float*)malloc(sizeof(float) * 3);
+        float damping = 25.0;
+        float spring = 100.0;
+        float dt = 1 / 60.0;
+        float* f = (float*)malloc(sizeof(float) * 3);
+
+        f[0] = -damping * pdot[0] - spring * (p[0] - p_d[0]);
+        f[1] = -damping * pdot[1] - spring * (p[1] - p_d[1]);
+        f[2] = -damping * pdot[2] - spring * (p[2] - p_d[2]);
+
         char c = cv::waitKey(1);
+        float force = 500.0;
+        if (c == 'a') {
+            f[0] += force;
+        }
+        if (c == 'd') {
+            f[0] -= force;
+        }
+        if (c == 's') {
+            f[1] += force;
+        }
+        if (c == 'w') {
+            f[1] -= force;
+        }
+
+        p_d[0] = 1.0f * cos(theta);
+        p_d[1] = 1.0f * sin(theta);
+        p_d[2] = 0.5f * sin(theta) - 5.0f;
+
+        
+        pddot[0] = f[0] / m;
+        pddot[1] = f[1] / m;
+        pddot[2] = f[2] / m;
+
+        pdot[0] += pddot[0] * dt;
+        pdot[1] += pddot[1] * dt;
+        pdot[2] += pddot[2] * dt;
+
+        p[0] += pdot[0] * dt;
+        p[1] += pdot[1] * dt;
+        p[2] += pdot[2] * dt;
+        free(f);
         free(vertices_projected);
         free(vertices_rotated);
         free(vertices_translated);
         free(zbuffer_cpu);
+        free(pddot);
         free(r);
     }
     free(q);
     free(p);
+    free(p_d);
+    free(pdot);
     free(w);
     free(data_cpu);
     free(vertices_cpu);
