@@ -36,6 +36,46 @@
 #include <sys/stat.h>
 
 
+class ModelData {
+public:
+    size_t Nf;
+    size_t Nv;
+    float* vertices_cpu;
+    float* colors_cpu;
+    uint* faces_cpu;
+    ModelData(size_t _Nf, size_t _Nv);
+    ~ModelData();
+    void loadCube(float vertices[][IMG_DIMS], float colors[][IMG_DIMS], uint32_t faces[][IMG_DIMS]);
+};
+
+ModelData::ModelData(size_t _Nf, size_t _Nv) : Nf(_Nf), Nv(_Nv) {
+    vertices_cpu = (float*)malloc(sizeof(float) * _Nv * 3);
+    colors_cpu = (float*)malloc(sizeof(float) *  _Nv * 3);
+    faces_cpu = (uint*)malloc(sizeof(uint) * _Nf * 3);
+}
+
+ModelData::~ModelData() {
+    free(vertices_cpu);
+    free(colors_cpu);
+    free(faces_cpu);
+}
+
+void ModelData::loadCube(float vertices[][IMG_DIMS], float colors[][IMG_DIMS], uint32_t faces[][IMG_DIMS]) {
+    for (int i = 0; i < Nv; i++) {
+        for (int j = 0; j < IMG_DIMS; j++) {
+            vertices_cpu[IMG_DIMS * i + j] = vertices[i][j];
+            colors_cpu[IMG_DIMS * i + j] = colors[i][j] / 255.0;
+        }
+    }
+
+    for (int i = 0; i < Nf; i++) {
+        for (int j = 0; j < IMG_DIMS; j++) {
+            faces_cpu[IMG_DIMS * i + j] = faces[i][j];
+        }
+    }
+}
+
+
 
 bool pressed = false;
 int curr_x = 0;
@@ -157,24 +197,9 @@ int main(int argc, char** argv) {
     CudaTransformer* transformer = new CudaTransformer();
 #endif
 
-    uint8_t* data_cpu = (uint8_t*)malloc(sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
-    float* vertices_cpu = (float*)malloc(sizeof(float) * Nv * 3);
-    float* colors_cpu = (float*)malloc(sizeof(float) *  Nv * 3);
-    uint* faces_cpu = (uint*)malloc(sizeof(uint) * Nf * 3);
-
 #ifdef CUBE
-    for (int i = 0; i < Nv; i++) {
-        for (int j = 0; j < IMG_DIMS; j++) {
-            vertices_cpu[IMG_DIMS * i + j] = vertices[i][j];
-            colors_cpu[IMG_DIMS * i + j] = colors[i][j] / 255.0;
-        }
-    }
-
-    for (int i = 0; i < Nf; i++) {
-        for (int j = 0; j < IMG_DIMS; j++) {
-            faces_cpu[IMG_DIMS * i + j] = faces[i][j];
-        }
-    }
+    ModelData model_data(Nf, Nv);
+    model_data.loadCube(vertices, colors, faces);
 #else
     std::string inputfile = "../src/teapot.obj";
     tinyobj::ObjReaderConfig reader_config;
@@ -225,6 +250,7 @@ int main(int argc, char** argv) {
         colors_cpu[3 * i + 2] = 255;
     }
 #endif
+    uint8_t* data_cpu = (uint8_t*)malloc(sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
 
     float cx, cy, fx, fy;
 
@@ -260,6 +286,7 @@ int main(int argc, char** argv) {
     p_d[1] = 0.0;
     p_d[2] = 0.0;
 
+
     bool rot_toggle = false;
     cv::namedWindow("render", cv::WINDOW_NORMAL);
     cv::setMouseCallback("render", mouse_cb, NULL);
@@ -291,7 +318,7 @@ int main(int argc, char** argv) {
             cv::cvtColor(hsv, rgb, cv::COLOR_HSV2RGB);
             cv::Vec<float, 3> rgb_val = rgb.at<cv::Vec<float, 3>>(0, 0);
             for (int j = 0; j < IMG_DIMS; j++) {
-                colors_cpu[IMG_DIMS * i + j] = rgb_val[j];
+                model_data.colors_cpu[IMG_DIMS * i + j] = rgb_val[j];
             }
         }
 
@@ -338,7 +365,7 @@ int main(int argc, char** argv) {
         }
         quat_prod(r, q, q);
 
-        transformer->rotate(vertices_rotated, vertices_cpu, q, Nv);
+        transformer->rotate(vertices_rotated, model_data.vertices_cpu, q, Nv);
         transformer->translate(vertices_translated, vertices_rotated, p, Nv);
 
         memset(data_cpu, 0, sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
@@ -349,7 +376,7 @@ int main(int argc, char** argv) {
         float params_cpu[4] = {
             cx, cy, fx, fy
         };
-        renderer->render(data_cpu, zbuffer_cpu, vertices_translated, colors_cpu, faces_cpu, params_cpu, Nv, Nf);
+        renderer->render(data_cpu, zbuffer_cpu, vertices_translated, model_data.colors_cpu, model_data.faces_cpu, params_cpu, Nv, Nf);
        
         cv::Mat img(cv::Size(IMG_COLS, IMG_ROWS), CV_8UC3, data_cpu);
         cv::imshow("render", img);
@@ -410,9 +437,6 @@ int main(int argc, char** argv) {
     free(pdot);
     free(w);
     free(data_cpu);
-    free(vertices_cpu);
-    free(colors_cpu);
-    free(faces_cpu);
 
     delete transformer;
     delete renderer;
