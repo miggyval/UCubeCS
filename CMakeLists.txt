@@ -2,7 +2,7 @@ cmake_minimum_required( VERSION 3.10 )
 
 project( render_test )
 
-add_definitions(-DIMG_ROWS=512)
+add_definitions(-DIMG_ROWS=1024)
 add_definitions(-DIMG_COLS=1024)
 add_definitions(-DIMG_CHNS=3)
 add_definitions(-DIMG_DIMS=3)
@@ -19,7 +19,7 @@ endif()
 set(render_test_VERSION 1.0)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_BUILD_TYPE Debu)
-set(freenect2_DIR "$ENV{HOME}/freenect2/lib/cmake/freenect2")
+set(freenect2_DIR "$ENV{HOME}/Libraries/freenect2/lib/cmake/freenect2")
 
 include(GenerateExportHeader)
 
@@ -47,12 +47,12 @@ include_directories(
     ${tiny}
 )
 
-include_directories("$ENV{HOME}/kinect_streamer_lib/include/")
-link_directories("$ENV{HOME}/kinect_streamer_lib/build/")
+include_directories("$ENV{HOME}/Libraries/kinect_streamer/include/")
+set( kinect_streamer_INCLUDE_DIRS $ENV{HOME}/Libraries/kinect_streamer_lib/include )
 link_directories(${PCL_LIBRARY_DIRS})
-
+link_directories( /usr/local/lib/kinect_streamer )
 if (UNIX)
-    include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+    include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${kinect_streamer_INCLUDE_DIRS})
 endif()
 
 if (APPLE)

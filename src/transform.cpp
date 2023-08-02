@@ -162,9 +162,52 @@ int MetalTransformer::init() {
 
 #ifdef __gnu_linux__
 
-CudaTransformer::CudaTransformer() {
+CpuTransformer::CpuTransformer() {
     
 }
+
+
+CudaTransformer::CudaTransformer() {    
+
+}
+
+
+void CpuTransformer::rotate(float* dst, float* src, float* q, uint N) {
+   
+    for (int index = 0; index < N; index++) {
+        int n = index;
+        float w = q[0];
+        float x = q[1];
+        float y = q[2];
+        float z = q[3];
+
+        float vw = 0;
+        float vx = src[3 * n + 0];
+        float vy = src[3 * n + 1];
+        float vz = src[3 * n + 2];
+        
+        float rw = w * vw - x * vx - y * vy - z * vz;
+        float rx = w * vx + x * vw + y * vz - z * vy;
+        float ry = w * vy - x * vz + y * vw + z * vx;
+        float rz = w * vz + x * vy - y * vx + z * vw;
+
+        dst[3 * n + 0] = rw * -x + rx * w + ry * -z - rz * -y;
+        dst[3 * n + 1] = rw * -y - rx * -z + ry * w + rz * -x;
+        dst[3 * n + 2] = rw * -z + rx * -y - ry * -x + rz * w;
+    }
+}
+
+
+void CpuTransformer::translate(float* dst, float* src, float* p, uint N) {
+    for (int index = 0; index < N; index++) {
+        int n = index;
+        for (size_t i = 0; i < 3; i++) {
+            dst[3 * n + i] = src[3 * n + i] + p[i];
+        }
+    }
+    
+}
+
 
 void CudaTransformer::rotate(float* dst, float* src, float* q, uint N) {
    
@@ -184,7 +227,7 @@ void CudaTransformer::rotate(float* dst, float* src, float* q, uint N) {
     rotate_helper(dst_gpu, src_gpu, q_gpu, N);
 
     err = cudaDeviceSynchronize();
-    err = cudaMemcpy(dst, dst_gpu, sizeof(uint8_t) * N * 3, cudaMemcpyDeviceToHost);
+    err = cudaMemcpy(dst, dst_gpu, sizeof(float) * N * 3, cudaMemcpyDeviceToHost);
 
     err = cudaFree(dst_gpu);
     err = cudaFree(src_gpu);
@@ -213,14 +256,14 @@ void CudaTransformer::translate(float* dst, float* src, float* p, uint N) {
     translate_helper(dst_gpu, src_gpu, p_gpu, N);
 
     err = cudaDeviceSynchronize();
-    err = cudaMemcpy(dst, dst_gpu, sizeof(uint8_t) * N * 3, cudaMemcpyDeviceToHost);
+    err = cudaMemcpy(dst, dst_gpu, sizeof(float) * N * 3, cudaMemcpyDeviceToHost);
 
+    
     err = cudaFree(dst_gpu);
     err = cudaFree(src_gpu);
     err = cudaFree(p_gpu);
 
     err = cudaGetLastError();
-    
 }
 
 #endif

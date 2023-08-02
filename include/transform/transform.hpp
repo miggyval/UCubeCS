@@ -27,6 +27,17 @@ private:
 #endif
 
 #ifdef __gnu_linux__
+
+
+class CpuTransformer{
+public:
+    CpuTransformer();
+    void rotate(float* dst, float* src, float* q, uint N);
+    void translate(float* dst, float* src, float* p, uint N);
+};
+
+
+
 class CudaTransformer{
 public:
     CudaTransformer();

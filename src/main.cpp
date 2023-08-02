@@ -35,6 +35,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+//#define CPU_ONLY
 
 class ModelData {
 public:
@@ -113,6 +114,7 @@ void quat_prod(float* u, float* v, float* r) {
     r[3] = uw * vz + ux * vy - uy * vx + uz * vw;
 }
 
+/*
 void projection(float cx, float cy, float fx, float fy, float* vp_arr, float* v_arr, int numPoints);
 
 void projection(float cx, float cy, float fx, float fy, float* vp_arr, float* v_arr, int numPoints) {
@@ -122,15 +124,14 @@ void projection(float cx, float cy, float fx, float fy, float* vp_arr, float* v_
         vp_arr[3 * i + 2]   =      v_arr[3 * i + 2];
     }
 }
+*/
 
 int main(int argc, char** argv) {
 
     cv::namedWindow("render", cv::WINDOW_NORMAL);
     cv::resizeWindow("render", cv::Size(IMG_COLS, IMG_ROWS));
     uint8_t data[IMG_ROWS][IMG_COLS][IMG_CHNS] = {0};
-
-
-
+    
 
 #ifdef CUBE
     float size = 0.5;
@@ -191,10 +192,20 @@ int main(int argc, char** argv) {
     renderer->init();
     transformer->init();
 #endif
-
 #ifdef __gnu_linux__
+
+#ifdef CPU_ONLY
+    CpuRenderer* renderer = new CpuRenderer();
+#else
     CudaRenderer* renderer = new CudaRenderer();
+#endif
+
+#ifdef CPU_ONLY
+    CpuTransformer* transformer = new CpuTransformer();
+#else
     CudaTransformer* transformer = new CudaTransformer();
+#endif
+
 #endif
 
 #ifdef CUBE
@@ -256,8 +267,8 @@ int main(int argc, char** argv) {
 
     cx = IMG_COLS / 2;
     cy = IMG_ROWS / 2;
-    fx = std::min(IMG_ROWS, IMG_COLS);
-    fy = std::min(IMG_ROWS, IMG_COLS);
+    fx = std::min(IMG_ROWS, IMG_COLS) / 4;
+    fy = std::min(IMG_ROWS, IMG_COLS) / 4;
 
     float* q = (float*)malloc(sizeof(float) * 4);
 
@@ -295,10 +306,10 @@ int main(int argc, char** argv) {
     w[1] = 0;
     w[2] = 0;
     float hue_off = 0.0f;
-
+    float t = 0.0;
     while (true) {
 
-
+        t += 0.005 * M_PI;
         theta += 0.005 * M_PI;
 
         delta_x = (float)(curr_x - prev_x) / (float)IMG_COLS;
@@ -327,7 +338,7 @@ int main(int argc, char** argv) {
         float* vertices_projected = (float*)malloc(sizeof(float) * Nv * 3);
         float* zbuffer_cpu = (float*)malloc(sizeof(float) * IMG_ROWS * IMG_COLS);
         float* r = (float*)malloc(sizeof(float) * 4);
-
+        
         float axis_norm = sqrt(delta_x * delta_x + delta_y * delta_y);
         float axis_y = 0;
         float axis_x = 0;
@@ -346,11 +357,10 @@ int main(int argc, char** argv) {
             w[0] += axis_x;
             w[1] += axis_y;
         }
-        
 
-        w[0] *= 0.85;
-        w[1] *= 0.85;
-        w[2] *= 0.85;
+        w[0] *= 0.95;
+        w[1] *= 0.95;
+        w[2] *= 0.95;
 
         float dtheta = sqrt(w[0] * w[0] + w[1] * w[1] + w[2] * w[2]);
         r[0] = 1;
@@ -363,11 +373,15 @@ int main(int argc, char** argv) {
             r[2] = w[1] * sin(dtheta / 2) / dtheta;
             r[3] = w[2] * sin(dtheta / 2) / dtheta;
         }
+        float rmag = sqrt(r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
+        r[0] /= rmag;
+        r[1] /= rmag;
+        r[2] /= rmag;
+        r[3] /= rmag;
         quat_prod(r, q, q);
-
         transformer->rotate(vertices_rotated, model_data.vertices_cpu, q, Nv);
-        transformer->translate(vertices_translated, vertices_rotated, p, Nv);
-
+        transformer->translate(vertices_translated, vertices_rotated, p, Nv);   
+        
         memset(data_cpu, 0, sizeof(uint8_t) * IMG_ROWS * IMG_COLS * IMG_CHNS);
 
         for (int i = 0; i < IMG_ROWS * IMG_COLS; i++) {
@@ -380,55 +394,12 @@ int main(int argc, char** argv) {
        
         cv::Mat img(cv::Size(IMG_COLS, IMG_ROWS), CV_8UC3, data_cpu);
         cv::imshow("render", img);
-
-        float m = 1.0;
-        float* pddot = (float*)malloc(sizeof(float) * 3);
-        float damping = 25.0;
-        float spring = 100.0;
-        float dt = 1 / 60.0;
-        float* f = (float*)malloc(sizeof(float) * 3);
-
-        f[0] = -damping * pdot[0] - spring * (p[0] - p_d[0]);
-        f[1] = -damping * pdot[1] - spring * (p[1] - p_d[1]);
-        f[2] = -damping * pdot[2] - spring * (p[2] - p_d[2]);
-
-        char c = cv::waitKey(1);
-        float force = 500.0;
-        if (c == 'a') {
-            f[0] += force;
-        }
-        if (c == 'd') {
-            f[0] -= force;
-        }
-        if (c == 's') {
-            f[1] += force;
-        }
-        if (c == 'w') {
-            f[1] -= force;
-        }
-
-        p_d[0] = 1.0f * cos(theta);
-        p_d[1] = 1.0f * sin(theta);
-        p_d[2] = 0.5f * sin(theta) - 5.0f;
-
+        cv::waitKey(13);
         
-        pddot[0] = f[0] / m;
-        pddot[1] = f[1] / m;
-        pddot[2] = f[2] / m;
-
-        pdot[0] += pddot[0] * dt;
-        pdot[1] += pddot[1] * dt;
-        pdot[2] += pddot[2] * dt;
-
-        p[0] += pdot[0] * dt;
-        p[1] += pdot[1] * dt;
-        p[2] += pdot[2] * dt;
-        free(f);
         free(vertices_projected);
         free(vertices_rotated);
         free(vertices_translated);
         free(zbuffer_cpu);
-        free(pddot);
         free(r);
     }
     free(q);
